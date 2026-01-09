@@ -5,7 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Trash2, Calendar, Users, CheckCircle, XCircle } from 'lucide-react';
+import { 
+  Trash2, Calendar, Users, CheckCircle, XCircle, 
+  ChevronDown, ChevronUp, Eye, Clock, Award 
+} from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AdminContentManager from '@/AdminContentManager';
 import AdminAccessComplete from '@/AdminAccessComplete';
@@ -14,6 +17,9 @@ import AdminPaymentHistory from '@/AdminPaymentHistory';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// Maximum items to show in quick view
+const QUICK_VIEW_LIMIT = 5;
 
 const AdminPanel = () => {
   const navigate = useNavigate();

@@ -706,6 +706,19 @@ async def update_level_progress(input: ProgressUpdate):
     if input.live_attended is not None:
         progress['live_attended'] = input.live_attended
     
+    if input.payment_status:
+        progress['payment_status'] = input.payment_status
+        if input.payment_status == 'validated':
+            progress['access_granted'] = True
+    
+    if input.volunteer_status:
+        progress['volunteer_status'] = input.volunteer_status
+        if input.volunteer_status == 'validated':
+            progress['access_granted'] = True
+    
+    if input.access_granted is not None:
+        progress['access_granted'] = input.access_granted
+    
     progress['updated_at'] = datetime.now(timezone.utc).isoformat()
     
     # Upsert
@@ -732,7 +745,10 @@ async def get_level_progress(user_id: str, level_id: str):
             "videos_completed": [],
             "text_confirmed": False,
             "live_booked_id": None,
-            "live_attended": False
+            "live_attended": False,
+            "payment_status": "pending",
+            "volunteer_status": "pending",
+            "access_granted": False
         }
     
     return progress
@@ -746,9 +762,6 @@ async def get_user_all_progress(user_id: str):
 async def check_level_unlocked(user_id: str, level_id: str):
     # Get level content
     content = await db.level_content.find_one({"level_id": level_id}, {"_id": 0})
-    if not content:
-        # No content means level is unlocked by default
-        return {"unlocked": True, "reason": "no_content"}
     
     # Get user progress
     progress = await db.user_level_progress.find_one({
@@ -757,7 +770,28 @@ async def check_level_unlocked(user_id: str, level_id: str):
     }, {"_id": 0})
     
     if not progress:
-        return {"unlocked": False, "reason": "no_progress"}
+        return {
+            "unlocked": False,
+            "access_granted": False,
+            "payment_status": "pending",
+            "volunteer_status": "pending",
+            "reason": "no_progress"
+        }
+    
+    # Check access granted (payment OR volunteer validated)
+    access_granted = progress.get('access_granted', False)
+    
+    if not access_granted:
+        return {
+            "unlocked": False,
+            "access_granted": False,
+            "payment_status": progress.get('payment_status', 'pending'),
+            "volunteer_status": progress.get('volunteer_status', 'pending'),
+            "reason": "access_not_granted"
+        }
+    
+    # If no content, access granted means unlocked
+    if not content:
     
     # Check requirements
     videos_done = len(content.get('videos', [])) == 0 or len(progress.get('videos_completed', [])) >= len(content.get('videos', []))

@@ -366,14 +366,30 @@ const AdminPanel = () => {
         {/* ==================== */}
         {/* SECTION 3: GESTION COMPLÈTE DES ACCÈS (CRUD PRINCIPAL) */}
         {/* ==================== */}
+        <div className="mb-8">
+          <AdminAccessComplete />
+        </div>
 
-        <AdminAccessComplete />
+        {/* ==================== */}
+        {/* SECTION 4: HISTORIQUE DES PAIEMENTS */}
+        {/* ==================== */}
+        <div className="mb-8">
+          <AdminPaymentHistory />
+        </div>
 
-        <AdminPaymentHistory />
+        {/* ==================== */}
+        {/* SECTION 5: CONFIGURATION DES PAIEMENTS */}
+        {/* ==================== */}
+        <div className="mb-8">
+          <AdminPaymentConfig />
+        </div>
 
-        <AdminPaymentConfig />
-
-        <AdminContentManager />
+        {/* ==================== */}
+        {/* SECTION 6: CONTENU DE FORMATION */}
+        {/* ==================== */}
+        <div className="mb-8">
+          <AdminContentManager />
+        </div>
 
         <div className="text-center mt-12 space-x-4">
           <Link to="/levels">

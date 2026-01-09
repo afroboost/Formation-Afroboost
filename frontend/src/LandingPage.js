@@ -215,17 +215,17 @@ const LandingPage = () => {
               </Button>
             </Link>
             <Link to="/exam">
-              <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="book-exam-button">
+              <Button variant="outline" className="border-purple-500 text-purple-400 btn-secondary" data-testid="book-exam-button">
                 Réserver un Examen
               </Button>
             </Link>
             <Link to="/diplomas">
-              <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="view-diplomas-button">
+              <Button variant="outline" className="border-purple-500 text-purple-400 btn-secondary" data-testid="view-diplomas-button">
                 Voir les Diplômes
               </Button>
             </Link>
             <Link to="/verify-certificate">
-              <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="verify-certificate-button">
+              <Button variant="outline" className="border-purple-500 text-purple-400 btn-secondary" data-testid="verify-certificate-button">
                 Vérifier un Certificat
               </Button>
             </Link>

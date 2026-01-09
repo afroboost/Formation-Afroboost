@@ -214,6 +214,80 @@ class LevelPaymentConfigCreate(BaseModel):
     payment_instructions: dict = {}
     volunteer_description: str = ""
 
+# =====================
+# USER ACCESS MODELS (COMPLETE MANAGEMENT)
+# =====================
+
+class UserAccess(BaseModel):
+    """Complete user access management with status tracking"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    level_id: str
+    status: str = "pending"  # active, expired, revoked, pending
+    access_type: str = "payment"  # payment, volunteer, admin_grant
+    granted_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None  # None = permanent
+    revoked_at: Optional[datetime] = None
+    revoked_by: Optional[str] = None
+    revoke_reason: Optional[str] = None
+    payment_id: Optional[str] = None  # Link to PaymentTransaction
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class UserAccessCreate(BaseModel):
+    user_id: str
+    level_id: str
+    access_type: str = "admin_grant"  # payment, volunteer, admin_grant
+    status: str = "active"
+    expires_at: Optional[str] = None  # ISO date string or None for permanent
+
+class UserAccessUpdate(BaseModel):
+    status: Optional[str] = None
+    access_type: Optional[str] = None
+    expires_at: Optional[str] = None
+
+class UserAccessRevoke(BaseModel):
+    reason: Optional[str] = None
+    revoked_by: str = "admin"
+
+# =====================
+# PAYMENT TRANSACTION MODELS (MULTI-REGION)
+# =====================
+
+class PaymentTransaction(BaseModel):
+    """Payment transaction with multi-region support (EU/CH/Africa)"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    level_id: str
+    amount: float
+    currency: str = "CHF"  # CHF, EUR, XAF, XOF, NGN, GHS, KES, etc.
+    payment_method: str  # stripe, twint_api, twint_link, mobile_money_mtn, mobile_money_orange, mobile_money_airtel, aggregator_paystack, aggregator_flutterwave, manual
+    status: str = "pending"  # pending, completed, failed, refunded
+    external_reference: Optional[str] = None  # Our reference for tracking
+    provider_transaction_id: Optional[str] = None  # Provider's transaction ID
+    stripe_payment_intent_id: Optional[str] = None
+    webhook_received: bool = False
+    access_id: Optional[str] = None  # Link to UserAccess created after payment
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    completed_at: Optional[datetime] = None
+    metadata: dict = {}
+
+class PaymentInitiate(BaseModel):
+    user_id: str
+    level_id: str
+    payment_method: str  # stripe, twint_api, mobile_money_mtn, mobile_money_orange, etc.
+    currency: Optional[str] = None  # Override level config currency if needed
+    return_url: Optional[str] = None  # For redirect after payment
+
+class PaymentWebhook(BaseModel):
+    provider: str  # stripe, twint, mtn, orange, paystack, flutterwave
+    event_type: str
+    transaction_id: str
+    status: str
+    metadata: dict = {}
+
 # Hardcoded admin secret (in production, use env variable)
 ADMIN_SECRET_ID = os.environ.get('ADMIN_SECRET_ID', 'AFRO-ADMIN-2025')
 

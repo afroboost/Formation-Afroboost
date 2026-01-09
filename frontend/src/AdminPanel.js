@@ -300,7 +300,12 @@ const AdminPanel = () => {
           </CardContent>
         </Card>
 
-        <div className="text-center mt-12">
+        <div className="text-center mt-12 space-x-4">
+          <Link to="/levels">
+            <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="go-to-levels-admin">
+              Voir Page Niveaux
+            </Button>
+          </Link>
           <Link to="/exam">
             <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="back-to-exam-admin">
               Voir Page Étudiants

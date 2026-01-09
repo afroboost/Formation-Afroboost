@@ -169,6 +169,15 @@ class LevelAccessRequest(BaseModel):
     level_id: str
     request_type: str  # "payment" or "volunteer"
 
+class AdminAuth(BaseModel):
+    admin_secret_id: str
+
+class AdminRecovery(BaseModel):
+    email: str
+
+# Hardcoded admin secret (in production, use env variable)
+ADMIN_SECRET_ID = os.environ.get('ADMIN_SECRET_ID', 'AFRO-ADMIN-2025')
+
 # =====================
 # EXAM DATES ENDPOINTS
 # =====================

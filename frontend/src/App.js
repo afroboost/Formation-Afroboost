@@ -580,6 +580,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/levels" element={<LevelsPage />} />
+          <Route path="/levels/:levelId" element={<LevelTrainingPage />} />
           <Route path="/exam" element={<ExamPage />} />
           <Route path="/results/:bookingId" element={<ResultsPage />} />
           <Route path="/diplomas" element={<DiplomasPage />} />

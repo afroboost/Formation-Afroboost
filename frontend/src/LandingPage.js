@@ -55,15 +55,25 @@ const LandingPage = () => {
             <Button
               onClick={downloadTrainingSummary}
               className="btn-neon text-lg px-8 py-6"
+              disabled={isDownloading}
               data-testid="hero-download-summary-button"
             >
-              <Download className="w-5 h-5 mr-2" />
-              Télécharger le Programme Complet (PDF)
+              {isDownloading ? (
+                <>
+                  <span className="spinner"></span>
+                  Téléchargement...
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5 mr-2" />
+                  Télécharger le Programme Complet (PDF)
+                </>
+              )}
             </Button>
             <Link to="/levels">
               <Button
                 variant="outline"
-                className="border-purple-500 text-purple-400 text-lg px-8 py-6"
+                className="border-purple-500 text-purple-400 btn-secondary text-lg px-8 py-6"
                 data-testid="hero-start-training-button"
               >
                 Commencer la Formation

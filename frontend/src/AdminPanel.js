@@ -224,100 +224,148 @@ const AdminPanel = () => {
           </Card>
         </div>
 
-        <Card className="card-dark border-neon" data-testid="bookings-card">
-          <CardHeader>
-            <CardTitle className="text-2xl text-white">Réservations & Résultats</CardTitle>
-            <CardDescription className="text-gray-400">Valider les examens</CardDescription>
+        {/* ==================== */}
+        {/* SECTION 2: RÉSERVATIONS & RÉSULTATS (APERÇU RAPIDE) */}
+        {/* ==================== */}
+        <Card className="card-dark border-neon mb-8" data-testid="bookings-card">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl text-white flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-purple-400" />
+                  Réservations & Résultats
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  Aperçu rapide des examens récents
+                </CardDescription>
+              </div>
+              {bookings.length > 0 && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-400">
+                    {bookings.filter(b => b.status === 'booked').length} en attente
+                  </span>
+                  <span className="text-sm text-green-400">
+                    {bookings.filter(b => b.result === 'passed').length} réussis
+                  </span>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {bookings.length === 0 ? (
-                <p className="text-gray-400 text-center py-8" data-testid="no-bookings">Aucune réservation</p>
-              ) : (
-                bookings.map((booking) => (
-                  <div
-                    key={booking.id}
-                    data-testid={`admin-booking-${booking.id}`}
-                    className="p-4 bg-gray-800/50 rounded-lg border border-gray-700"
-                  >
-                    <div className="grid md:grid-cols-3 gap-4 items-center">
-                      <div>
-                        <p className="text-white font-semibold">{booking.student_name}</p>
-                        <p className="text-gray-400 text-sm">{booking.student_email}</p>
-                        <p className="text-gray-400 text-sm">{booking.exam_date} à {booking.exam_time}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-sm text-gray-400">Statut</p>
-                        <p className={`font-semibold ${
-                          booking.status === 'completed' ? 'text-green-400' : 'text-yellow-400'
-                        }`}>
-                          {booking.status}
-                        </p>
-                        {booking.result && (
-                          <p className={`text-sm ${
-                            booking.result === 'passed' ? 'text-green-400' : 'text-red-400'
-                          }`}>
-                            Résultat: {booking.result}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        {booking.status === 'booked' && (
-                          <>
+            {bookings.length === 0 ? (
+              <p className="text-gray-400 text-center py-6" data-testid="no-bookings">
+                Aucune réservation
+              </p>
+            ) : (
+              <>
+                {/* Quick view - Limited items */}
+                <div className="space-y-3">
+                  {(showAllBookings ? bookings : bookings.slice(0, QUICK_VIEW_LIMIT)).map((booking) => (
+                    <div
+                      key={booking.id}
+                      data-testid={`admin-booking-${booking.id}`}
+                      className="p-3 bg-gray-800/50 rounded-lg border border-gray-700"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        {/* Student info - compact */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium truncate">{booking.student_name}</p>
+                          <p className="text-gray-400 text-xs">{booking.exam_date} à {booking.exam_time}</p>
+                        </div>
+                        
+                        {/* Status badge */}
+                        <div className="flex-shrink-0">
+                          {booking.result ? (
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              booking.result === 'passed' 
+                                ? 'bg-green-500/20 text-green-400 border border-green-500' 
+                                : 'bg-red-500/20 text-red-400 border border-red-500'
+                            }`}>
+                              {booking.result === 'passed' ? 'Réussi' : 'Échoué'}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500">
+                              En attente
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Actions - only for pending */}
+                        {booking.status === 'booked' && !booking.result && (
+                          <div className="flex gap-2 flex-shrink-0">
                             <Button
                               onClick={() => handleUpdateResult(booking.id, 'passed')}
-                              className="bg-green-600 hover:bg-green-700"
+                              className="bg-green-600 hover:bg-green-700 h-8 px-3"
                               size="sm"
                               data-testid={`pass-exam-${booking.id}`}
                             >
-                              <CheckCircle className="w-4 h-4 mr-1" />
+                              <CheckCircle className="w-3 h-3 mr-1" />
                               Réussi
                             </Button>
                             <Button
                               onClick={() => handleUpdateResult(booking.id, 'failed')}
                               variant="destructive"
                               size="sm"
+                              className="h-8 px-3"
                               data-testid={`fail-exam-${booking.id}`}
                             >
-                              <XCircle className="w-4 h-4 mr-1" />
+                              <XCircle className="w-3 h-3 mr-1" />
                               Échoué
                             </Button>
-                          </>
+                          </div>
+                        )}
+                        
+                        {/* Certificate button for passed */}
+                        {booking.result === 'passed' && (
+                          <div className="flex gap-1 flex-shrink-0">
+                            <Button
+                              onClick={() => handleCreateCertificate(booking.student_id, booking.student_name, 'in-person')}
+                              size="sm"
+                              variant="outline"
+                              className="border-purple-500 text-purple-400 h-8 px-2 text-xs"
+                              data-testid={`create-inperson-cert-${booking.id}`}
+                            >
+                              <Award className="w-3 h-3 mr-1" />
+                              Cert.
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
-                    
-                    {booking.result === 'passed' && (
-                      <div className="mt-4 pt-4 border-t border-gray-700">
-                        <p className="text-sm text-gray-400 mb-2">Créer un certificat additionnel:</p>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => handleCreateCertificate(booking.student_id, booking.student_name, 'in-person')}
-                            size="sm"
-                            variant="outline"
-                            className="border-purple-500 text-purple-400"
-                            data-testid={`create-inperson-cert-${booking.id}`}
-                          >
-                            Présentiel
-                          </Button>
-                          <Button
-                            onClick={() => handleCreateCertificate(booking.student_id, booking.student_name, 'hybrid')}
-                            size="sm"
-                            variant="outline"
-                            className="border-purple-500 text-purple-400"
-                            data-testid={`create-hybrid-cert-${booking.id}`}
-                          >
-                            Hybride
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                  ))}
+                </div>
+                
+                {/* Show more/less button */}
+                {bookings.length > QUICK_VIEW_LIMIT && (
+                  <div className="mt-4 text-center">
+                    <Button
+                      onClick={() => setShowAllBookings(!showAllBookings)}
+                      variant="outline"
+                      className="border-gray-600 text-gray-400 hover:border-purple-500 hover:text-purple-400"
+                      data-testid="toggle-all-bookings"
+                    >
+                      {showAllBookings ? (
+                        <>
+                          <ChevronUp className="w-4 h-4 mr-2" />
+                          Réduire ({QUICK_VIEW_LIMIT} affichés)
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-4 h-4 mr-2" />
+                          Voir tout ({bookings.length} réservations)
+                        </>
+                      )}
+                    </Button>
                   </div>
-                ))
-              )}
-            </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
+
+        {/* ==================== */}
+        {/* SECTION 3: GESTION COMPLÈTE DES ACCÈS (CRUD PRINCIPAL) */}
+        {/* ==================== */}
 
         <AdminAccessComplete />
 

@@ -437,18 +437,64 @@ const LevelsPage = () => {
                               </div>
                             ) : showMoneyOption && paymentStatus === 'pending' && volunteerStatus !== 'validated' ? (
                               <div className="space-y-2">
-                                <Button
-                                  onClick={() => handleRequestAccess(levelId, 'payment')}
-                                  className="w-full btn-neon"
-                                  data-testid={`unlock-payment-${index}`}
-                                >
-                                  Payer ce niveau
-                                  {paymentConfig.price && ` (${paymentConfig.price} ${paymentConfig.currency || 'CHF'})`}
-                                </Button>
-                                {paymentConfig.enabled_payment_methods?.length > 0 && (
-                                  <p className="text-xs text-gray-400 text-center">
-                                    Méthodes: {paymentConfig.enabled_payment_methods.join(', ')}
-                                  </p>
+                                {/* Stripe button - Primary payment method */}
+                                {paymentConfig.enabled_payment_methods?.includes('stripe') && (
+                                  <Button
+                                    onClick={() => handleRequestAccess(levelId, 'payment', 'stripe')}
+                                    className="w-full btn-neon"
+                                    data-testid={`pay-stripe-${index}`}
+                                  >
+                                    💳 Payer par Carte
+                                    {paymentConfig.price && ` (${paymentConfig.price} ${paymentConfig.currency || 'CHF'})`}
+                                  </Button>
+                                )}
+                                
+                                {/* TWINT button */}
+                                {(paymentConfig.enabled_payment_methods?.includes('twint_api') || 
+                                  paymentConfig.enabled_payment_methods?.includes('twint_link')) && (
+                                  <Button
+                                    onClick={() => handleRequestAccess(levelId, 'payment', 'twint_api')}
+                                    variant="outline"
+                                    className="w-full border-blue-500 text-blue-400"
+                                    data-testid={`pay-twint-${index}`}
+                                  >
+                                    🔷 Payer par TWINT
+                                    {paymentConfig.price && ` (${paymentConfig.price} ${paymentConfig.currency || 'CHF'})`}
+                                  </Button>
+                                )}
+                                
+                                {/* Mobile Money buttons */}
+                                {paymentConfig.enabled_payment_methods?.includes('mobile_money_mtn') && (
+                                  <Button
+                                    onClick={() => handleRequestAccess(levelId, 'payment', 'mobile_money_mtn')}
+                                    variant="outline"
+                                    className="w-full border-yellow-500 text-yellow-400"
+                                    data-testid={`pay-mtn-${index}`}
+                                  >
+                                    📱 MTN Mobile Money
+                                  </Button>
+                                )}
+                                {paymentConfig.enabled_payment_methods?.includes('mobile_money_orange') && (
+                                  <Button
+                                    onClick={() => handleRequestAccess(levelId, 'payment', 'mobile_money_orange')}
+                                    variant="outline"
+                                    className="w-full border-orange-500 text-orange-400"
+                                    data-testid={`pay-orange-${index}`}
+                                  >
+                                    🍊 Orange Money
+                                  </Button>
+                                )}
+                                
+                                {/* Fallback: No specific method but money option enabled */}
+                                {paymentConfig.enabled_payment_methods?.length === 0 && paymentConfig.price > 0 && (
+                                  <Button
+                                    onClick={() => handleRequestAccess(levelId, 'payment', 'manual')}
+                                    className="w-full btn-neon"
+                                    data-testid={`unlock-payment-${index}`}
+                                  >
+                                    Demander l&apos;accès payant
+                                    {paymentConfig.price && ` (${paymentConfig.price} ${paymentConfig.currency || 'CHF'})`}
+                                  </Button>
                                 )}
                               </div>
                             ) : null}

@@ -311,6 +311,8 @@ const AdminPanel = () => {
           </CardContent>
         </Card>
 
+        <AdminPaymentConfig />
+
         <AdminAccessManager />
 
         <AdminContentManager />

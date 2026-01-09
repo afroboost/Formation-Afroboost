@@ -312,6 +312,179 @@ class AfroboostAPITester:
             404
         )
 
+    def test_level_documents_crud(self):
+        """Test CRUD operations for level documents"""
+        print("\n" + "="*60)
+        print("TESTING LEVEL DOCUMENTS ENDPOINTS")
+        print("="*60)
+        
+        # Test GET empty level documents
+        success, data = self.run_test(
+            "Get Student Level Documents (Empty)",
+            "GET",
+            "level-documents/student/NONEXISTENT",
+            200
+        )
+        
+        # Test CREATE level document
+        level_doc_data = {
+            "student_id": "STU_LEVELS_001",
+            "student_name": "Sophie Martin",
+            "level_name": "Level 1 – Afroboost DNA",
+            "skills": [
+                "Maîtrise des mouvements de base Afrobeat",
+                "Compréhension du rythme et de la musicalité",
+                "Technique de isolation corporelle",
+                "Coordination bras-jambes fondamentale"
+            ]
+        }
+        
+        success, level_doc = self.run_test(
+            "Create Level Document",
+            "POST",
+            "level-documents",
+            200,
+            level_doc_data
+        )
+        
+        if success and level_doc:
+            # Test GET student level documents
+            success, docs_list = self.run_test(
+                "Get Student Level Documents",
+                "GET",
+                f"level-documents/student/{level_doc_data['student_id']}",
+                200
+            )
+            
+            # Test PDF download
+            success, _ = self.run_test(
+                "Download Level Document PDF",
+                "GET",
+                f"level-documents/{level_doc['id']}/pdf",
+                200,
+                response_type='blob'
+            )
+            
+            # Test creating multiple level documents for same student
+            level_doc_data_2 = {
+                "student_id": "STU_LEVELS_001",
+                "student_name": "Sophie Martin",
+                "level_name": "Level 2 – Rhythm Foundation",
+                "skills": [
+                    "Maîtrise des variations rythmiques complexes",
+                    "Transitions fluides entre mouvements",
+                    "Expression corporelle et énergie",
+                    "Synchronisation musicale avancée"
+                ]
+            }
+            
+            success, level_doc_2 = self.run_test(
+                "Create Second Level Document",
+                "POST",
+                "level-documents",
+                200,
+                level_doc_data_2
+            )
+            
+            if success:
+                # Verify both documents exist for student
+                success, multiple_docs = self.run_test(
+                    "Get Multiple Student Level Documents",
+                    "GET",
+                    f"level-documents/student/{level_doc_data['student_id']}",
+                    200
+                )
+                
+                if success and multiple_docs:
+                    print(f"✅ Found {len(multiple_docs)} level documents for student")
+
+    def test_level_documents_e2e_scenario(self):
+        """Test complete E2E scenario for level documents"""
+        print("\n" + "="*60)
+        print("TESTING LEVEL DOCUMENTS E2E SCENARIO")
+        print("="*60)
+        
+        student_id = "STU_E2E_LEVELS"
+        student_name = "Jean Dupont"
+        
+        # Create 3 level documents for the student
+        levels_data = [
+            {
+                "student_id": student_id,
+                "student_name": student_name,
+                "level_name": "Level 1 – Afroboost DNA",
+                "skills": [
+                    "Maîtrise des mouvements de base Afrobeat",
+                    "Compréhension du rythme et de la musicalité",
+                    "Technique de isolation corporelle",
+                    "Coordination bras-jambes fondamentale"
+                ]
+            },
+            {
+                "student_id": student_id,
+                "student_name": student_name,
+                "level_name": "Level 2 – Rhythm Foundation",
+                "skills": [
+                    "Maîtrise des variations rythmiques complexes",
+                    "Transitions fluides entre mouvements",
+                    "Expression corporelle et énergie",
+                    "Synchronisation musicale avancée"
+                ]
+            },
+            {
+                "student_id": student_id,
+                "student_name": student_name,
+                "level_name": "Level 3 – Style & Flow",
+                "skills": [
+                    "Développement du style personnel",
+                    "Improvisation et créativité",
+                    "Maîtrise des enchaînements chorégraphiques",
+                    "Performance scénique et présence"
+                ]
+            }
+        ]
+        
+        created_docs = []
+        
+        for i, level_data in enumerate(levels_data):
+            success, doc = self.run_test(
+                f"E2E Levels: Create Level {i+1} Document",
+                "POST",
+                "level-documents",
+                200,
+                level_data
+            )
+            
+            if success and doc:
+                created_docs.append(doc)
+                
+                # Test PDF download for each document
+                success, _ = self.run_test(
+                    f"E2E Levels: Download Level {i+1} PDF",
+                    "GET",
+                    f"level-documents/{doc['id']}/pdf",
+                    200,
+                    response_type='blob'
+                )
+        
+        # Verify all documents exist for student
+        success, all_docs = self.run_test(
+            "E2E Levels: Get All Student Documents",
+            "GET",
+            f"level-documents/student/{student_id}",
+            200
+        )
+        
+        if success and all_docs:
+            print(f"✅ E2E Levels: Found {len(all_docs)} total documents for student {student_id}")
+            
+            # Verify document structure and content
+            for doc in all_docs:
+                if 'document_id' in doc and 'level_name' in doc and 'skills' in doc:
+                    print(f"✅ E2E Levels: Document {doc['document_id']} has correct structure")
+                else:
+                    print(f"❌ E2E Levels: Document {doc.get('id', 'unknown')} missing required fields")
+
     def test_complete_e2e_scenario(self):
         """Test complete end-to-end scenario"""
         print("\n" + "="*60)

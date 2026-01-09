@@ -715,6 +715,83 @@ class AfroboostAPITester:
         print("   🎉 CERTIFICATE VERIFICATION ENDPOINT FULLY WORKING!")
         return True
 
+    def test_specific_level_document_pdf(self):
+        """Test the specific level document PDF mentioned in the request"""
+        print("\n" + "="*60)
+        print("TESTING SPECIFIC LEVEL DOCUMENT PDF (bf0dd6cb-7fa4-4ac6-80e7-8656971ec8d9)")
+        print("="*60)
+        
+        # Test the specific document ID from the request
+        document_id = "bf0dd6cb-7fa4-4ac6-80e7-8656971ec8d9"
+        
+        success, response = self.run_test(
+            f"Download Specific Level Document PDF ({document_id})",
+            "GET",
+            f"level-documents/{document_id}/pdf",
+            200,
+            response_type='pdf'
+        )
+        
+        if success:
+            # Additional PDF validation
+            try:
+                import requests
+                url = f"{self.api_url}/level-documents/{document_id}/pdf"
+                response = requests.get(url)
+                
+                # Check content type
+                content_type = response.headers.get('content-type', '')
+                if content_type == 'application/pdf':
+                    print("   ✅ Correct PDF content type")
+                else:
+                    print(f"   ❌ Wrong content type: {content_type}")
+                    return False
+                
+                # Check filename in Content-Disposition
+                content_disposition = response.headers.get('content-disposition', '')
+                expected_filename = f'afroboost_niveau_{document_id}.pdf'
+                if expected_filename in content_disposition:
+                    print(f"   ✅ Correct filename: {expected_filename}")
+                else:
+                    print(f"   ❌ Wrong filename: {content_disposition}")
+                    return False
+                
+                # Check PDF magic bytes
+                if response.content.startswith(b'%PDF'):
+                    print("   ✅ Valid PDF magic bytes")
+                else:
+                    print("   ❌ Invalid PDF format")
+                    return False
+                    
+                # Check PDF size (should be > 3KB as specified in request)
+                pdf_size = len(response.content)
+                print(f"   📄 PDF size: {pdf_size} bytes")
+                if pdf_size > 3072:  # 3KB = 3072 bytes
+                    print("   ✅ PDF size > 3KB as required")
+                else:
+                    print("   ❌ PDF size should be > 3KB")
+                    return False
+                
+                # Save PDF for manual inspection
+                try:
+                    with open(f'/tmp/afroboost_niveau_{document_id}_test.pdf', 'wb') as f:
+                        f.write(response.content)
+                    print(f"   📄 PDF saved to /tmp/afroboost_niveau_{document_id}_test.pdf for inspection")
+                except Exception as e:
+                    print(f"   ⚠️  Could not save PDF: {e}")
+                
+                print("   🎉 SPECIFIC LEVEL DOCUMENT PDF WORKING!")
+                return True
+                
+            except Exception as e:
+                print(f"   ❌ Error validating PDF: {e}")
+                return False
+        else:
+            print(f"   ❌ Failed to download level document PDF for ID: {document_id}")
+            return False
+        
+        return success
+
     def test_training_summary_pdf(self):
         """Test the public training summary PDF endpoint"""
         print("\n" + "="*60)

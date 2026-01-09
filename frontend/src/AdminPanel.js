@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Trash2, Calendar, Users, CheckCircle, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AdminContentManager from '@/AdminContentManager';
+import AdminAccessManager from '@/AdminAccessManager';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

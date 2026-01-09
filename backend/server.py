@@ -425,11 +425,9 @@ async def download_level_document_pdf(document_id: str):
     c.setFillColor(colors.HexColor('#a855f7'))
     c.rect(0, height - 6*cm, width, 6*cm, fill=True, stroke=False)
     
-    # Lighter purple overlay for gradient effect
+    # Lighter purple overlay for gradient effect (using different shade)
     c.setFillColor(colors.HexColor('#c084fc'))
-    c.setFillColorAlpha(0.3)
     c.rect(0, height - 6*cm, width, 3*cm, fill=True, stroke=False)
-    c.setFillColorAlpha(1)
     
     # Title - AFROBOOST in white on purple
     c.setFillColor(colors.white)

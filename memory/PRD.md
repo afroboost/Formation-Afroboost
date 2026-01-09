@@ -10,6 +10,7 @@ Créer un système de certification et diplôme complet pour la marque Afroboost
 - Génération de PDF officiels (diplômes, documents de niveau, résumé de formation)
 - Système d'accès basé sur paiement ou bénévolat
 - Panneau d'administration complet
+- **Paiements multi-régions (Europe, Suisse, Afrique)**
 
 ## Core Requirements
 
@@ -30,16 +31,34 @@ Créer un système de certification et diplôme complet pour la marque Afroboost
 - Résumé global de formation (public, sans authentification)
 - Support UTF-8 complet pour caractères français (accents)
 
+### Gestion des Accès (COMPLÈTE)
+- Créer un accès (admin_grant, payment, volunteer)
+- Modifier un accès (status, type, expiration)
+- Supprimer un accès
+- Révoquer un accès actif (avec raison)
+- Statuts: active, pending, expired, revoked
+- Durée configurable (permanent ou avec date d'expiration)
+
+### Paiements Multi-Régions (API-FIRST)
+- **Europe**: Stripe PaymentIntent
+- **Suisse**: TWINT API, TWINT QR (fallback)
+- **Afrique**: MTN Mobile Money, Orange Money, Airtel Money
+- **Agrégateurs**: Paystack, Flutterwave, CinetPay
+- Webhook automatique → création d'accès
+- Historique complet des transactions
+- Validation manuelle admin
+
 ### Panneau Admin
 - Authentification par ID secret (AFRO-ADMIN-2025)
 - Gestion des dates d'examen
-- Validation des paiements/bénévolat
+- Gestion COMPLÈTE des accès (CRUD + révocation)
+- Historique des paiements avec filtres
 - Configuration des paiements par niveau
 - Gestion du contenu de formation
 
 ## What's Been Implemented
 
-### Completed (January 2026)
+### Completed (January 9, 2026)
 - ✅ Système complet de certification avec 3 types de diplômes
 - ✅ Page d'examen avec réservation
 - ✅ Page de résultat (succès/échec)
@@ -54,21 +73,39 @@ Créer un système de certification et diplôme complet pour la marque Afroboost
 - ✅ Page de vérification publique de certificat
 - ✅ Boutons de partage social ("copier le lien")
 - ✅ Résumé de formation PDF global (public)
+- ✅ **Gestion COMPLÈTE des accès (CRUD + révocation)**
+- ✅ **Paiements multi-régions (Stripe, TWINT, Mobile Money)**
+- ✅ **Historique des transactions avec filtres**
+- ✅ **Webhook de paiement → création automatique d'accès**
 
-### API Endpoints
+## API Endpoints
+
+### Accès Utilisateur
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| /api/access | GET | Liste tous les accès (filtrable) |
+| /api/access | POST | Créer un accès |
+| /api/access/{id} | GET | Obtenir un accès |
+| /api/access/{id} | PUT | Modifier un accès |
+| /api/access/{id} | DELETE | Supprimer un accès |
+| /api/access/{id}/revoke | POST | Révoquer un accès actif |
+
+### Paiements
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| /api/payments/history | GET | Historique des transactions |
+| /api/payments/initiate | POST | Initier un paiement |
+| /api/payments/webhook | POST | Webhook providers |
+| /api/payments/{id}/complete | POST | Validation manuelle |
+
+### Autres
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | /api/admin/auth | POST | Authentification admin |
 | /api/exam-dates | GET/POST/DELETE | Gestion dates d'examen |
-| /api/exam-bookings | GET/POST | Réservations d'examen |
 | /api/certificates | GET/POST | Gestion certificats |
-| /api/certificates/verify/{id} | GET | Vérification publique |
-| /api/level-documents | GET/POST | Documents de niveau |
 | /api/level-content | GET/POST | Contenu de formation |
-| /api/level-progress | GET/POST | Progression utilisateur |
-| /api/level-payment-config | GET/POST | Config paiements par niveau |
-| /api/level-access/request | POST | Demande d'accès |
-| /api/level-access/validate | POST | Validation admin |
+| /api/level-payment-config | GET/POST | Config paiements |
 | /api/training-summary/pdf | GET | Résumé PDF public |
 
 ## Architecture
@@ -80,19 +117,60 @@ Créer un système de certification et diplôme complet pour la marque Afroboost
 - PDF: ReportLab avec polices DejaVuSans
 
 ### Key Files
-- `/app/backend/server.py` - API backend monolithique
+- `/app/backend/server.py` - API backend
 - `/app/frontend/src/LevelsPage.js` - Page de progression
 - `/app/frontend/src/AdminPanel.js` - Panneau admin
+- `/app/frontend/src/AdminAccessComplete.js` - **Gestion CRUD accès**
+- `/app/frontend/src/AdminPaymentHistory.js` - **Historique paiements**
 - `/app/frontend/src/AdminPaymentConfig.js` - Config paiements
+
+## Data Models
+
+### UserAccess
+```json
+{
+  "id": "uuid",
+  "user_id": "string",
+  "level_id": "string",
+  "status": "active|pending|expired|revoked",
+  "access_type": "payment|volunteer|admin_grant",
+  "granted_at": "datetime",
+  "expires_at": "datetime|null",
+  "revoked_at": "datetime|null",
+  "revoked_by": "string|null",
+  "revoke_reason": "string|null",
+  "payment_id": "string|null"
+}
+```
+
+### PaymentTransaction
+```json
+{
+  "id": "uuid",
+  "user_id": "string",
+  "level_id": "string",
+  "amount": "float",
+  "currency": "CHF|EUR|XAF|XOF|NGN|GHS",
+  "payment_method": "stripe|twint_api|mobile_money_mtn|...",
+  "status": "pending|completed|failed|refunded",
+  "external_reference": "string",
+  "provider_transaction_id": "string|null",
+  "access_id": "string|null"
+}
+```
 
 ## Test Credentials
 - **Admin ID**: AFRO-ADMIN-2025
 - **Test User**: ID=test-user-123, Name=Jean-François Éloïse
 
-## Known Issues (Minor)
-- Le checkbox des méthodes de paiement dans AdminPaymentConfig peut nécessiter un rechargement après sauvegarde
+## Test Reports
+- `/app/test_reports/iteration_1.json` - Tests initiaux
+- `/app/test_reports/iteration_2.json` - Tests Access CRUD + Paiements (27/27 ✅)
 
 ## Future Backlog
-1. Refactoring de server.py (>1000 lignes) en modules séparés
-2. Extraction des composants de App.js vers des fichiers séparés
-3. Amélioration de l'UX mobile
+1. Intégration réelle Stripe API (PaymentIntent)
+2. Intégration réelle TWINT API
+3. Intégration Mobile Money via agrégateur (Paystack/Flutterwave)
+4. Notifications par email (demande d'accès, validation)
+5. Refactoring de server.py en modules
+6. Export des données admin (CSV/Excel)

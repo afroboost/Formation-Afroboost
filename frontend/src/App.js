@@ -473,13 +473,18 @@ const DiplomasPage = () => {
           </div>
         )}
 
-        <div className="text-center mt-12">
+        <div className="text-center mt-12 space-x-4">
+          <Link to="/verify-certificate">
+            <Button className="btn-neon" data-testid="verify-certificate-link">
+              Vérifier un Certificat
+            </Button>
+          </Link>
           <Link to="/exam">
             <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="back-to-exam-link">
               Retour aux Examens
             </Button>
           </Link>
-          <Link to="/levels" className="ml-4">
+          <Link to="/levels">
             <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="view-levels-from-diplomas">
               Voir Mes Niveaux
             </Button>

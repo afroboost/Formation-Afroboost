@@ -586,6 +586,7 @@ function App() {
           <Route path="/results/:bookingId" element={<ResultsPage />} />
           <Route path="/diplomas" element={<DiplomasPage />} />
           <Route path="/verify-certificate" element={<VerifyCertificatePage />} />
+          <Route path="/admin-login" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Routes>
       </BrowserRouter>

@@ -118,11 +118,17 @@ const LevelsPage = () => {
     }
 
     try {
-      await axios.post(`${API}/level-access/request`, {
+      const payload = {
         user_id: studentId,
         level_id: levelId,
         request_type: requestType
-      });
+      };
+      
+      console.log('Submitting access request:', payload);
+      
+      const response = await axios.post(`${API}/level-access/request`, payload);
+      
+      console.log('Access request response:', response.data);
       
       if (requestType === 'payment') {
         toast.success('Demande de paiement soumise');
@@ -132,7 +138,9 @@ const LevelsPage = () => {
       
       checkAllLevelsUnlock(studentId);
     } catch (error) {
-      toast.error('Erreur lors de la soumission');
+      console.error('Access request error:', error);
+      const errorMsg = error.response?.data?.detail || 'Une erreur est survenue. Veuillez vérifier les informations saisies.';
+      toast.error(errorMsg);
     }
   };
 

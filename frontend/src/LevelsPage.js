@@ -225,7 +225,11 @@ const LevelsPage = () => {
                   value={studentId}
                   onChange={(e) => {
                     setStudentId(e.target.value);
-                    if (e.target.value) fetchMyDocuments(e.target.value);
+                    saveUserInfo(e.target.value, studentName);
+                    if (e.target.value) {
+                      fetchMyDocuments(e.target.value);
+                      checkAllLevelsUnlock(e.target.value);
+                    }
                   }}
                   placeholder="Votre ID étudiant"
                 />
@@ -237,7 +241,10 @@ const LevelsPage = () => {
                   data-testid="profile-student-name-input"
                   className="input-dark"
                   value={studentName}
-                  onChange={(e) => setStudentName(e.target.value)}
+                  onChange={(e) => {
+                    setStudentName(e.target.value);
+                    saveUserInfo(studentId, e.target.value);
+                  }}
                   placeholder="Votre nom"
                 />
               </div>

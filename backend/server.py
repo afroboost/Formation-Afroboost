@@ -396,81 +396,157 @@ async def download_level_document_pdf(document_id: str):
     if not doc:
         raise HTTPException(status_code=404, detail="Level document not found")
     
-    # Generate PDF
+    # Fix grammar in skills automatically
+    def fix_skill_grammar(skill):
+        # Fix common French grammar issues
+        skill = skill.replace("de isolation", "d'isolation")
+        skill = skill.replace("de improvisation", "d'improvisation")
+        skill = skill.replace("de élèves", "d'élèves")
+        return skill
+    
+    # Convert English level names to French for PDF
+    level_name_fr = doc['level_name']
+    level_name_fr = level_name_fr.replace("Level 1 – Afroboost DNA", "Niveau 1 — Afroboost DNA")
+    level_name_fr = level_name_fr.replace("Level 2 – Rhythm Foundation", "Niveau 2 — Rhythm Foundation")
+    level_name_fr = level_name_fr.replace("Level 3 – Style & Flow", "Niveau 3 — Style & Flow")
+    level_name_fr = level_name_fr.replace("Level 4 – Teaching Fundamentals", "Niveau 4 — Teaching Fundamentals")
+    level_name_fr = level_name_fr.replace("Level 5 – Master Instructor", "Niveau 5 — Master Instructor")
+    
+    # Generate PDF with white background for better printability
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    # Background - Deep Black
-    c.setFillColor(colors.HexColor('#0a0a0a'))
+    # White background for print readability
+    c.setFillColor(colors.white)
     c.rect(0, 0, width, height, fill=True, stroke=False)
     
-    # Neon Purple border
-    c.setStrokeColor(colors.HexColor('#a855f7'))
-    c.setLineWidth(3)
-    c.rect(2*cm, 2*cm, width - 4*cm, height - 4*cm, fill=False, stroke=True)
-    
-    # Inner border glow effect
-    c.setStrokeColor(colors.HexColor('#c084fc'))
-    c.setLineWidth(1)
-    c.rect(2.2*cm, 2.2*cm, width - 4.4*cm, height - 4.4*cm, fill=False, stroke=True)
-    
-    # Title - AFROBOOST in neon purple
+    # Header rectangle with neon purple gradient effect
     c.setFillColor(colors.HexColor('#a855f7'))
-    c.setFont("Helvetica-Bold", 48)
-    c.drawCentredString(width/2, height - 5*cm, "AFROBOOST")
+    c.rect(0, height - 6*cm, width, 6*cm, fill=True, stroke=False)
     
-    # Document type
-    c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 28)
-    c.drawCentredString(width/2, height - 7*cm, "DOCUMENT DE VALIDATION DE NIVEAU")
-    
-    # Level name
+    # Lighter purple overlay for gradient effect
     c.setFillColor(colors.HexColor('#c084fc'))
-    c.setFont("Helvetica-Bold", 22)
-    c.drawCentredString(width/2, height - 9.5*cm, doc['level_name'].upper())
+    c.setFillColorAlpha(0.3)
+    c.rect(0, height - 6*cm, width, 3*cm, fill=True, stroke=False)
+    c.setFillColorAlpha(1)
     
-    # Student name
+    # Title - AFROBOOST in white on purple
     c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 32)
-    c.drawCentredString(width/2, height - 12*cm, doc['student_name'].upper())
+    c.setFont("Helvetica-Bold", 52)
+    c.drawCentredString(width/2, height - 3.5*cm, "AFROBOOST")
     
-    # Statement
-    c.setFillColor(colors.HexColor('#e5e5e5'))
-    c.setFont("Helvetica", 14)
-    c.drawCentredString(width/2, height - 14*cm, "Ce document certifie que le niveau ci-dessus a été")
-    c.drawCentredString(width/2, height - 14.7*cm, "validé avec succès.")
+    # Subtitle
+    c.setFont("Helvetica", 16)
+    c.drawCentredString(width/2, height - 5*cm, "Document de validation de niveau")
     
-    # Skills validated title
+    # Main content area
+    # Level name with purple accent
     c.setFillColor(colors.HexColor('#a855f7'))
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(4*cm, height - 17*cm, "COMPÉTENCES VALIDÉES:")
+    c.setFont("Helvetica-Bold", 24)
+    c.drawCentredString(width/2, height - 8*cm, level_name_fr.upper())
+    
+    # Student information section
+    c.setFillColor(colors.HexColor('#2d2d2d'))
+    c.setFont("Helvetica-Bold", 14)
+    
+    # Apprenant label
+    c.drawString(4*cm, height - 10*cm, "Apprenant :")
+    c.setFont("Helvetica-Bold", 18)
+    c.setFillColor(colors.HexColor('#1a1a1a'))
+    c.drawString(7.5*cm, height - 10*cm, doc['student_name'])
+    
+    # ID Étudiant
+    c.setFillColor(colors.HexColor('#2d2d2d'))
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(4*cm, height - 11*cm, "ID Étudiant :")
+    c.setFont("Helvetica", 14)
+    c.drawString(7.5*cm, height - 11*cm, doc['student_id'])
+    
+    # Official statement box
+    y_pos = height - 13.5*cm
+    c.setStrokeColor(colors.HexColor('#a855f7'))
+    c.setLineWidth(2)
+    c.setFillColor(colors.HexColor('#f9fafb'))
+    c.roundRect(3*cm, y_pos - 1*cm, width - 6*cm, 2*cm, 0.3*cm, fill=True, stroke=True)
+    
+    c.setFillColor(colors.HexColor('#1a1a1a'))
+    c.setFont("Helvetica-Oblique", 13)
+    c.drawCentredString(width/2, y_pos - 0.3*cm, "Ce document certifie que le niveau ci-dessus")
+    c.drawCentredString(width/2, y_pos - 0.8*cm, "a été validé avec succès.")
+    
+    # Skills section
+    skills_y = height - 16*cm
+    c.setFillColor(colors.HexColor('#a855f7'))
+    c.setFont("Helvetica-Bold", 15)
+    c.drawString(3.5*cm, skills_y, "COMPÉTENCES VALIDÉES")
+    
+    # Underline
+    c.setStrokeColor(colors.HexColor('#a855f7'))
+    c.setLineWidth(1.5)
+    c.line(3.5*cm, skills_y - 0.15*cm, 8*cm, skills_y - 0.15*cm)
     
     # Skills list
-    c.setFillColor(colors.white)
-    c.setFont("Helvetica", 12)
-    y_position = height - 18.5*cm
+    c.setFillColor(colors.HexColor('#2d2d2d'))
+    c.setFont("Helvetica", 11)
+    y_position = skills_y - 1*cm
+    
     for skill in doc['skills']:
-        c.drawString(4.5*cm, y_position, f"• {skill}")
-        y_position -= 0.6*cm
-        if y_position < 8*cm:  # Prevent overflow
+        # Fix grammar
+        skill_fixed = fix_skill_grammar(skill)
+        
+        # Draw bullet
+        c.setFillColor(colors.HexColor('#a855f7'))
+        c.circle(4*cm, y_position + 0.15*cm, 0.08*cm, fill=True)
+        
+        # Draw skill text
+        c.setFillColor(colors.HexColor('#2d2d2d'))
+        c.drawString(4.5*cm, y_position, skill_fixed)
+        y_position -= 0.65*cm
+        
+        if y_position < 6*cm:  # Prevent overflow
             break
     
-    # Document details
-    c.setFillColor(colors.HexColor('#a855f7'))
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(4*cm, 6*cm, f"ID DOCUMENT: {doc['document_id']}")
-    c.drawString(4*cm, 5.3*cm, f"ID ÉTUDIANT: {doc['student_id']}")
+    # Footer verification box
+    footer_y = 4*cm
+    c.setStrokeColor(colors.HexColor('#e5e7eb'))
+    c.setLineWidth(1)
+    c.setFillColor(colors.HexColor('#f9fafb'))
+    c.rect(2*cm, footer_y - 2.5*cm, width - 4*cm, 2.5*cm, fill=True, stroke=True)
+    
+    # Footer content
+    c.setFillColor(colors.HexColor('#6b7280'))
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2.5*cm, footer_y - 0.8*cm, "ID du document :")
+    c.setFont("Helvetica", 10)
+    c.drawString(5.5*cm, footer_y - 0.8*cm, doc['document_id'])
+    
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2.5*cm, footer_y - 1.4*cm, "Date de validation :")
     
     validated_date = doc['validated_at']
     if isinstance(validated_date, str):
         validated_date = datetime.fromisoformat(validated_date)
-    c.drawString(4*cm, 4.6*cm, f"DATE DE VALIDATION: {validated_date.strftime('%d/%m/%Y')}")
+    c.setFont("Helvetica", 10)
+    c.drawString(5.5*cm, footer_y - 1.4*cm, validated_date.strftime('%d/%m/%Y'))
     
-    # Footer
-    c.setFillColor(colors.HexColor('#71717a'))
-    c.setFont("Helvetica-Oblique", 10)
-    c.drawCentredString(width/2, 3*cm, "Formation Officielle Afroboost – Imprimable & Vérifiable")
+    # Verification text
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2.5*cm, footer_y - 2*cm, "Vérifier :")
+    c.setFont("Helvetica", 9)
+    c.setFillColor(colors.HexColor('#a855f7'))
+    verification_url = f"afroboost.com/verify-certificate?id={doc['document_id']}"
+    c.drawString(4.2*cm, footer_y - 2*cm, verification_url)
+    
+    # Bottom footer
+    c.setFillColor(colors.HexColor('#9ca3af'))
+    c.setFont("Helvetica-Oblique", 9)
+    c.drawCentredString(width/2, 1.2*cm, "Formation Officielle Afroboost — Imprimable & Vérifiable")
+    
+    # Purple accent line at bottom
+    c.setStrokeColor(colors.HexColor('#a855f7'))
+    c.setLineWidth(2)
+    c.line(3*cm, 0.7*cm, width - 3*cm, 0.7*cm)
     
     c.save()
     buffer.seek(0)
@@ -479,7 +555,7 @@ async def download_level_document_pdf(document_id: str):
         buffer,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f"attachment; filename=afroboost_level_{doc['document_id']}.pdf"
+            "Content-Disposition": f"attachment; filename=afroboost_niveau_{doc['document_id']}.pdf"
         }
     )
 

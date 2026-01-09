@@ -12,6 +12,7 @@ import { Calendar, Download, CheckCircle, XCircle, Video, Clock, Users } from 'l
 import AdminPanel from '@/AdminPanel';
 import LevelsPage from '@/LevelsPage';
 import LandingPage from '@/LandingPage';
+import VerifyCertificatePage from '@/VerifyCertificatePage';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

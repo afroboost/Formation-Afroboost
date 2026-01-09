@@ -302,6 +302,8 @@ const AdminPanel = () => {
           </CardContent>
         </Card>
 
+        <AdminAccessManager />
+
         <AdminContentManager />
 
         <div className="text-center mt-12 space-x-4">

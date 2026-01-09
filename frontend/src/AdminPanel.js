@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Trash2, Calendar, Users, CheckCircle, XCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AdminContentManager from '@/AdminContentManager';
 import AdminAccessManager from '@/AdminAccessManager';
 
@@ -14,6 +14,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const AdminPanel = () => {
+  const navigate = useNavigate();
   const [examDates, setExamDates] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [newDate, setNewDate] = useState({
@@ -24,9 +25,16 @@ const AdminPanel = () => {
   });
 
   useEffect(() => {
+    // Check admin session
+    const adminSession = localStorage.getItem('afroboost_admin_session');
+    if (!adminSession) {
+      navigate('/admin-login');
+      return;
+    }
+    
     fetchExamDates();
     fetchBookings();
-  }, []);
+  }, [navigate]);
 
   const fetchExamDates = async () => {
     try {

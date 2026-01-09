@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { Download, GraduationCap, Award, Video, FileText, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ShareButton from '@/components/ShareButton';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

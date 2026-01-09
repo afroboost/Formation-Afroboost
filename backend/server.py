@@ -610,8 +610,162 @@ async def download_level_document_pdf(document_id: str):
     )
 
 # =====================
-# TRAINING SUMMARY PDF (PUBLIC - NO AUTH)
+# LEVEL CONTENT ENDPOINTS
 # =====================
+
+@api_router.post("/level-content")
+async def create_or_update_level_content(input: LevelContentCreate):
+    # Check if content already exists for this level
+    existing = await db.level_content.find_one({"level_id": input.level_id})
+    
+    if existing:
+        # Update existing
+        update_data = input.model_dump()
+        update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+        
+        await db.level_content.update_one(
+            {"level_id": input.level_id},
+            {"$set": update_data}
+        )
+        content = await db.level_content.find_one({"level_id": input.level_id}, {"_id": 0})
+    else:
+        # Create new
+        content_obj = LevelContent(**input.model_dump())
+        doc = content_obj.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        
+        await db.level_content.insert_one(doc)
+        content = doc
+    
+    return content
+
+@api_router.get("/level-content/{level_id}")
+async def get_level_content(level_id: str):
+    content = await db.level_content.find_one({"level_id": level_id}, {"_id": 0})
+    if not content:
+        # Return empty content if not found
+        return {
+            "level_id": level_id,
+            "level_name": "",
+            "videos": [],
+            "text_content": "",
+            "live_required": False,
+            "live_sessions": []
+        }
+    return content
+
+@api_router.get("/level-content")
+async def get_all_level_content():
+    contents = await db.level_content.find({}, {"_id": 0}).to_list(1000)
+    return contents
+
+# =====================
+# USER LEVEL PROGRESS ENDPOINTS
+# =====================
+
+@api_router.post("/level-progress")
+async def update_level_progress(input: ProgressUpdate):
+    # Find or create progress
+    progress = await db.user_level_progress.find_one({
+        "user_id": input.user_id,
+        "level_id": input.level_id
+    })
+    
+    if not progress:
+        # Create new progress
+        progress_obj = UserLevelProgress(
+            user_id=input.user_id,
+            level_id=input.level_id
+        )
+        progress = progress_obj.model_dump()
+        progress['updated_at'] = progress['updated_at'].isoformat()
+    
+    # Update fields
+    if input.video_id and input.video_id not in progress.get('videos_completed', []):
+        if 'videos_completed' not in progress:
+            progress['videos_completed'] = []
+        progress['videos_completed'].append(input.video_id)
+    
+    if input.text_confirmed is not None:
+        progress['text_confirmed'] = input.text_confirmed
+    
+    if input.live_booked_id:
+        progress['live_booked_id'] = input.live_booked_id
+    
+    if input.live_attended is not None:
+        progress['live_attended'] = input.live_attended
+    
+    progress['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    # Upsert
+    await db.user_level_progress.update_one(
+        {"user_id": input.user_id, "level_id": input.level_id},
+        {"$set": progress},
+        upsert=True
+    )
+    
+    return progress
+
+@api_router.get("/level-progress/{user_id}/{level_id}")
+async def get_level_progress(user_id: str, level_id: str):
+    progress = await db.user_level_progress.find_one({
+        "user_id": user_id,
+        "level_id": level_id
+    }, {"_id": 0})
+    
+    if not progress:
+        # Return empty progress
+        return {
+            "user_id": user_id,
+            "level_id": level_id,
+            "videos_completed": [],
+            "text_confirmed": False,
+            "live_booked_id": None,
+            "live_attended": False
+        }
+    
+    return progress
+
+@api_router.get("/level-progress/{user_id}")
+async def get_user_all_progress(user_id: str):
+    progress_list = await db.user_level_progress.find({"user_id": user_id}, {"_id": 0}).to_list(1000)
+    return progress_list
+
+@api_router.get("/level-progress/check-unlock/{user_id}/{level_id}")
+async def check_level_unlocked(user_id: str, level_id: str):
+    # Get level content
+    content = await db.level_content.find_one({"level_id": level_id}, {"_id": 0})
+    if not content:
+        # No content means level is unlocked by default
+        return {"unlocked": True, "reason": "no_content"}
+    
+    # Get user progress
+    progress = await db.user_level_progress.find_one({
+        "user_id": user_id,
+        "level_id": level_id
+    }, {"_id": 0})
+    
+    if not progress:
+        return {"unlocked": False, "reason": "no_progress"}
+    
+    # Check requirements
+    videos_done = len(content.get('videos', [])) == 0 or len(progress.get('videos_completed', [])) >= len(content.get('videos', []))
+    text_done = not content.get('text_content') or progress.get('text_confirmed', False)
+    live_done = not content.get('live_required', False) or progress.get('live_attended', False)
+    
+    unlocked = videos_done and text_done and live_done
+    
+    return {
+        "unlocked": unlocked,
+        "videos_done": videos_done,
+        "text_done": text_done,
+        "live_done": live_done,
+        "videos_progress": f"{len(progress.get('videos_completed', []))}/{len(content.get('videos', []))}",
+        "live_required": content.get('live_required', False)
+    }
+
+# Include the router in the main app
+app.include_router(api_router)
 
 @api_router.get("/training-summary/pdf")
 async def download_training_summary_pdf():

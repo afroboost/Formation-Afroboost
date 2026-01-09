@@ -862,6 +862,577 @@ class AfroboostAPITester:
         
         return success
 
+    def test_level_content_crud(self):
+        """Test CRUD operations for level content - NEW TRAINING SYSTEM"""
+        print("\n" + "="*60)
+        print("TESTING LEVEL CONTENT ENDPOINTS - NEW TRAINING SYSTEM")
+        print("="*60)
+        
+        # Test 1: GET empty level content
+        success, empty_content = self.run_test(
+            "Get Level Content (Empty)",
+            "GET",
+            "level-content/level-1",
+            200
+        )
+        
+        if success and empty_content:
+            print(f"   ✅ Empty content structure: {empty_content}")
+        
+        # Test 2: CREATE level content
+        level_content_data = {
+            "level_id": "level-1",
+            "level_name": "Level 1 – Afroboost DNA",
+            "videos": [
+                {
+                    "title": "Introduction aux mouvements de base",
+                    "url": "https://youtube.com/watch?v=test1",
+                    "duration": "10:30"
+                },
+                {
+                    "title": "Rythme et coordination",
+                    "url": "https://youtube.com/watch?v=test2",
+                    "duration": "8:45"
+                }
+            ],
+            "text_content": "Bienvenue dans le Level 1 d'Afroboost. Ce niveau couvre les fondamentaux...",
+            "live_required": False,
+            "live_sessions": []
+        }
+        
+        success, created_content = self.run_test(
+            "Create Level Content",
+            "POST",
+            "level-content",
+            200,
+            level_content_data
+        )
+        
+        if not success:
+            print("❌ Cannot continue level content tests without creation")
+            return False
+        
+        # Test 3: GET created level content
+        success, retrieved_content = self.run_test(
+            "Get Created Level Content",
+            "GET",
+            "level-content/level-1",
+            200
+        )
+        
+        if success and retrieved_content:
+            # Validate structure
+            required_fields = ['level_id', 'level_name', 'videos', 'text_content', 'live_required', 'live_sessions']
+            missing_fields = [field for field in required_fields if field not in retrieved_content]
+            
+            if not missing_fields:
+                print("   ✅ All required fields present in level content")
+                
+                # Validate videos structure
+                if len(retrieved_content['videos']) == 2:
+                    print("   ✅ Correct number of videos")
+                    for i, video in enumerate(retrieved_content['videos']):
+                        if 'id' in video and 'title' in video and 'url' in video:
+                            print(f"   ✅ Video {i+1} has correct structure")
+                        else:
+                            print(f"   ❌ Video {i+1} missing required fields")
+                else:
+                    print(f"   ❌ Expected 2 videos, got {len(retrieved_content['videos'])}")
+            else:
+                print(f"   ❌ Missing required fields: {missing_fields}")
+                return False
+        
+        # Test 4: UPDATE level content (should update existing)
+        updated_content_data = {
+            "level_id": "level-1",
+            "level_name": "Level 1 – Afroboost DNA (Updated)",
+            "videos": [
+                {
+                    "title": "Introduction aux mouvements de base (Updated)",
+                    "url": "https://youtube.com/watch?v=test1-updated",
+                    "duration": "12:00"
+                }
+            ],
+            "text_content": "Contenu mis à jour pour le Level 1...",
+            "live_required": True,
+            "live_sessions": [
+                {
+                    "date": "2025-02-20",
+                    "time": "18:00",
+                    "meeting_link": "https://meet.google.com/level1-live",
+                    "available_slots": 15,
+                    "booked_count": 0
+                }
+            ]
+        }
+        
+        success, updated_content = self.run_test(
+            "Update Level Content",
+            "POST",
+            "level-content",
+            200,
+            updated_content_data
+        )
+        
+        if success:
+            print("   ✅ Level content updated successfully")
+        
+        # Test 5: GET all level content
+        success, all_content = self.run_test(
+            "Get All Level Content",
+            "GET",
+            "level-content",
+            200
+        )
+        
+        if success and all_content:
+            print(f"   ✅ Found {len(all_content)} level content entries")
+        
+        return True
+
+    def test_level_progress_crud(self):
+        """Test CRUD operations for level progress - NEW TRAINING SYSTEM"""
+        print("\n" + "="*60)
+        print("TESTING LEVEL PROGRESS ENDPOINTS - NEW TRAINING SYSTEM")
+        print("="*60)
+        
+        user_id = "TEST_FLOW_001"
+        level_id = "level-1"
+        
+        # Test 1: GET empty progress
+        success, empty_progress = self.run_test(
+            "Get Level Progress (Empty)",
+            "GET",
+            f"level-progress/{user_id}/{level_id}",
+            200
+        )
+        
+        if success and empty_progress:
+            print(f"   ✅ Empty progress structure: {empty_progress}")
+        
+        # Test 2: UPDATE progress - mark video completed
+        video_progress_data = {
+            "user_id": user_id,
+            "level_id": level_id,
+            "video_id": "video-1"
+        }
+        
+        success, video_progress = self.run_test(
+            "Update Progress - Video Completed",
+            "POST",
+            "level-progress",
+            200,
+            video_progress_data
+        )
+        
+        if success and video_progress:
+            if "video-1" in video_progress.get('videos_completed', []):
+                print("   ✅ Video marked as completed")
+            else:
+                print("   ❌ Video not marked as completed")
+                return False
+        
+        # Test 3: UPDATE progress - confirm text read
+        text_progress_data = {
+            "user_id": user_id,
+            "level_id": level_id,
+            "text_confirmed": True
+        }
+        
+        success, text_progress = self.run_test(
+            "Update Progress - Text Confirmed",
+            "POST",
+            "level-progress",
+            200,
+            text_progress_data
+        )
+        
+        if success and text_progress:
+            if text_progress.get('text_confirmed') == True:
+                print("   ✅ Text marked as confirmed")
+            else:
+                print("   ❌ Text not marked as confirmed")
+                return False
+        
+        # Test 4: GET updated progress
+        success, updated_progress = self.run_test(
+            "Get Updated Level Progress",
+            "GET",
+            f"level-progress/{user_id}/{level_id}",
+            200
+        )
+        
+        if success and updated_progress:
+            # Validate progress structure
+            required_fields = ['user_id', 'level_id', 'videos_completed', 'text_confirmed']
+            missing_fields = [field for field in required_fields if field not in updated_progress]
+            
+            if not missing_fields:
+                print("   ✅ All required fields present in progress")
+                
+                # Check values
+                if "video-1" in updated_progress.get('videos_completed', []):
+                    print("   ✅ Video completion persisted")
+                else:
+                    print("   ❌ Video completion not persisted")
+                    
+                if updated_progress.get('text_confirmed') == True:
+                    print("   ✅ Text confirmation persisted")
+                else:
+                    print("   ❌ Text confirmation not persisted")
+            else:
+                print(f"   ❌ Missing required fields: {missing_fields}")
+                return False
+        
+        # Test 5: GET all user progress
+        success, all_progress = self.run_test(
+            "Get All User Progress",
+            "GET",
+            f"level-progress/{user_id}",
+            200
+        )
+        
+        if success and all_progress:
+            print(f"   ✅ Found {len(all_progress)} progress entries for user")
+        
+        return True
+
+    def test_level_unlock_check(self):
+        """Test level unlock check functionality - CORE TRAINING SYSTEM"""
+        print("\n" + "="*60)
+        print("TESTING LEVEL UNLOCK CHECK - CORE TRAINING SYSTEM")
+        print("="*60)
+        
+        user_id = "TEST_UNLOCK_001"
+        level_id = "level-1"
+        
+        # Test 1: Check unlock with no content (should be unlocked)
+        success, unlock_result = self.run_test(
+            "Check Unlock - No Content",
+            "GET",
+            f"level-progress/check-unlock/{user_id}/{level_id}",
+            200
+        )
+        
+        if success and unlock_result:
+            if unlock_result.get('unlocked') == True and unlock_result.get('reason') == 'no_content':
+                print("   ✅ Level unlocked when no content exists")
+            else:
+                print(f"   ❌ Expected unlocked=True with reason=no_content, got: {unlock_result}")
+        
+        # Test 2: Create level content first
+        level_content_data = {
+            "level_id": level_id,
+            "level_name": "Level 1 – Test Unlock",
+            "videos": [
+                {
+                    "title": "Test Video 1",
+                    "url": "https://youtube.com/watch?v=test1"
+                },
+                {
+                    "title": "Test Video 2", 
+                    "url": "https://youtube.com/watch?v=test2"
+                }
+            ],
+            "text_content": "Test content for unlock check",
+            "live_required": False,
+            "live_sessions": []
+        }
+        
+        success, created_content = self.run_test(
+            "Create Content for Unlock Test",
+            "POST",
+            "level-content",
+            200,
+            level_content_data
+        )
+        
+        if not success:
+            print("❌ Cannot test unlock without content")
+            return False
+        
+        # Test 3: Check unlock with content but no progress (should be locked)
+        success, locked_result = self.run_test(
+            "Check Unlock - Content Exists, No Progress",
+            "GET",
+            f"level-progress/check-unlock/{user_id}/{level_id}",
+            200
+        )
+        
+        if success and locked_result:
+            if locked_result.get('unlocked') == False:
+                print("   ✅ Level locked when content exists but no progress")
+                print(f"   📊 Progress details: {locked_result}")
+            else:
+                print(f"   ❌ Expected unlocked=False, got: {locked_result}")
+        
+        # Test 4: Complete partial progress
+        # Complete only 1 video
+        video1_progress = {
+            "user_id": user_id,
+            "level_id": level_id,
+            "video_id": created_content['videos'][0]['id']
+        }
+        
+        success, _ = self.run_test(
+            "Complete First Video",
+            "POST",
+            "level-progress",
+            200,
+            video1_progress
+        )
+        
+        # Check unlock (should still be locked)
+        success, partial_result = self.run_test(
+            "Check Unlock - Partial Progress",
+            "GET",
+            f"level-progress/check-unlock/{user_id}/{level_id}",
+            200
+        )
+        
+        if success and partial_result:
+            if partial_result.get('unlocked') == False:
+                print("   ✅ Level still locked with partial progress")
+                print(f"   📊 Partial progress: {partial_result}")
+            else:
+                print(f"   ❌ Expected unlocked=False with partial progress, got: {partial_result}")
+        
+        # Test 5: Complete all requirements
+        # Complete second video
+        video2_progress = {
+            "user_id": user_id,
+            "level_id": level_id,
+            "video_id": created_content['videos'][1]['id']
+        }
+        
+        success, _ = self.run_test(
+            "Complete Second Video",
+            "POST",
+            "level-progress",
+            200,
+            video2_progress
+        )
+        
+        # Confirm text
+        text_progress = {
+            "user_id": user_id,
+            "level_id": level_id,
+            "text_confirmed": True
+        }
+        
+        success, _ = self.run_test(
+            "Confirm Text Read",
+            "POST",
+            "level-progress",
+            200,
+            text_progress
+        )
+        
+        # Check unlock (should now be unlocked)
+        success, unlocked_result = self.run_test(
+            "Check Unlock - All Requirements Met",
+            "GET",
+            f"level-progress/check-unlock/{user_id}/{level_id}",
+            200
+        )
+        
+        if success and unlocked_result:
+            if unlocked_result.get('unlocked') == True:
+                print("   ✅ Level unlocked when all requirements met")
+                print(f"   🎉 Final unlock status: {unlocked_result}")
+                
+                # Validate detailed progress
+                if unlocked_result.get('videos_done') == True:
+                    print("   ✅ Videos requirement met")
+                if unlocked_result.get('text_done') == True:
+                    print("   ✅ Text requirement met")
+                if unlocked_result.get('live_done') == True:
+                    print("   ✅ Live requirement met (not required)")
+                    
+                return True
+            else:
+                print(f"   ❌ Expected unlocked=True when all requirements met, got: {unlocked_result}")
+                return False
+        
+        return False
+
+    def test_complete_training_flow_e2e(self):
+        """Test complete training flow end-to-end - MAIN FEATURE"""
+        print("\n" + "="*60)
+        print("TESTING COMPLETE TRAINING FLOW E2E - MAIN FEATURE")
+        print("="*60)
+        
+        user_id = "TEST_E2E_FLOW"
+        level_id = "level-1"
+        
+        # Step 1: Admin creates level content
+        print("\n📝 STEP 1: Admin creates level content")
+        level_content_data = {
+            "level_id": level_id,
+            "level_name": "Level 1 – Afroboost DNA",
+            "videos": [
+                {
+                    "title": "Mouvements de base Afrobeat",
+                    "url": "https://youtube.com/watch?v=afrobeat-basics",
+                    "duration": "15:30"
+                },
+                {
+                    "title": "Coordination et rythme",
+                    "url": "https://youtube.com/watch?v=coordination",
+                    "duration": "12:45"
+                }
+            ],
+            "text_content": "Bienvenue dans le Level 1 d'Afroboost. Ce niveau vous enseigne les fondamentaux de la danse Afrobeat...",
+            "live_required": False,
+            "live_sessions": []
+        }
+        
+        success, content = self.run_test(
+            "E2E: Admin Creates Level Content",
+            "POST",
+            "level-content",
+            200,
+            level_content_data
+        )
+        
+        if not success:
+            print("❌ E2E test failed at content creation")
+            return False
+        
+        print(f"   ✅ Content created with {len(content['videos'])} videos")
+        
+        # Step 2: Student checks initial unlock status (should be locked)
+        print("\n🔒 STEP 2: Student checks initial unlock status")
+        success, initial_unlock = self.run_test(
+            "E2E: Check Initial Unlock Status",
+            "GET",
+            f"level-progress/check-unlock/{user_id}/{level_id}",
+            200
+        )
+        
+        if success and initial_unlock:
+            if initial_unlock.get('unlocked') == False:
+                print("   ✅ Level initially locked (correct)")
+            else:
+                print(f"   ❌ Level should be initially locked, got: {initial_unlock}")
+        
+        # Step 3: Student completes training progressively
+        print("\n📚 STEP 3: Student completes training")
+        
+        # Complete first video
+        success, _ = self.run_test(
+            "E2E: Complete Video 1",
+            "POST",
+            "level-progress",
+            200,
+            {
+                "user_id": user_id,
+                "level_id": level_id,
+                "video_id": content['videos'][0]['id']
+            }
+        )
+        
+        # Check progress after first video
+        success, progress_1 = self.run_test(
+            "E2E: Check Progress After Video 1",
+            "GET",
+            f"level-progress/{user_id}/{level_id}",
+            200
+        )
+        
+        if success and progress_1:
+            print(f"   📊 Progress after video 1: {len(progress_1.get('videos_completed', []))}/2 videos")
+        
+        # Complete second video
+        success, _ = self.run_test(
+            "E2E: Complete Video 2",
+            "POST",
+            "level-progress",
+            200,
+            {
+                "user_id": user_id,
+                "level_id": level_id,
+                "video_id": content['videos'][1]['id']
+            }
+        )
+        
+        # Confirm text read
+        success, _ = self.run_test(
+            "E2E: Confirm Text Read",
+            "POST",
+            "level-progress",
+            200,
+            {
+                "user_id": user_id,
+                "level_id": level_id,
+                "text_confirmed": True
+            }
+        )
+        
+        # Step 4: Check final unlock status (should be unlocked)
+        print("\n🔓 STEP 4: Check final unlock status")
+        success, final_unlock = self.run_test(
+            "E2E: Check Final Unlock Status",
+            "GET",
+            f"level-progress/check-unlock/{user_id}/{level_id}",
+            200
+        )
+        
+        if success and final_unlock:
+            if final_unlock.get('unlocked') == True:
+                print("   🎉 Level successfully unlocked after completing training!")
+                print(f"   📊 Final status: {final_unlock}")
+                
+                # Step 5: Student can now validate level (simulate level document creation)
+                print("\n🏆 STEP 5: Student validates level")
+                level_doc_data = {
+                    "student_id": user_id,
+                    "student_name": "Test E2E Student",
+                    "level_name": content['level_name'],
+                    "skills": [
+                        "Maîtrise des mouvements de base Afrobeat",
+                        "Compréhension du rythme et de la musicalité",
+                        "Technique d'isolation corporelle",
+                        "Coordination bras-jambes fondamentale"
+                    ]
+                }
+                
+                success, level_doc = self.run_test(
+                    "E2E: Create Level Document (Validation)",
+                    "POST",
+                    "level-documents",
+                    200,
+                    level_doc_data
+                )
+                
+                if success and level_doc:
+                    print(f"   🎉 Level document created: {level_doc['document_id']}")
+                    
+                    # Test PDF generation
+                    success, _ = self.run_test(
+                        "E2E: Generate Level Document PDF",
+                        "GET",
+                        f"level-documents/{level_doc['id']}/pdf",
+                        200,
+                        response_type='blob'
+                    )
+                    
+                    if success:
+                        print("   📄 Level document PDF generated successfully")
+                        print("   🎉 COMPLETE TRAINING FLOW E2E TEST PASSED!")
+                        return True
+                    else:
+                        print("   ❌ Failed to generate level document PDF")
+                        return False
+                else:
+                    print("   ❌ Failed to create level document")
+                    return False
+            else:
+                print(f"   ❌ Level should be unlocked after training, got: {final_unlock}")
+                return False
+        
+        return False
+
     def run_all_tests(self):
         """Run all test suites"""
         print("🚀 Starting Afroboost API Tests")

@@ -348,7 +348,7 @@ const LevelsPage = () => {
               
               <div className="flex gap-4">
                 <Button
-                  onClick={() => handleValidateLevel(selectedLevel)}
+                  onClick={() => handleValidateLevel(selectedLevel, selectedLevel.levelId)}
                   className="flex-1 btn-neon"
                   data-testid="confirm-validation-button"
                 >

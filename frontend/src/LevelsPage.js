@@ -260,6 +260,8 @@ const LevelsPage = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {AVAILABLE_LEVELS.map((level, index) => {
               const validated = isLevelValidated(level.name);
+              const levelId = `level-${index + 1}`;
+              const unlockStatus = levelUnlockStatus[levelId] || { unlocked: false };
               
               return (
                 <Card 
@@ -286,10 +288,15 @@ const LevelsPage = () => {
                       )}
                     </div>
                     
-                    {!validated ? (
+                    {validated ? (
+                      <div className="flex items-center justify-center gap-2 p-2 bg-green-500/10 rounded-lg border border-green-500">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span className="text-green-500 text-sm font-semibold">Niveau validé ✅</span>
+                      </div>
+                    ) : unlockStatus.unlocked ? (
                       <Button
                         onClick={() => {
-                          setSelectedLevel(level);
+                          setSelectedLevel({ ...level, levelId });
                           setShowValidationForm(true);
                         }}
                         className="w-full btn-neon"
@@ -298,9 +305,19 @@ const LevelsPage = () => {
                         Valider ce Niveau
                       </Button>
                     ) : (
-                      <div className="flex items-center justify-center gap-2 p-2 bg-green-500/10 rounded-lg border border-green-500">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="text-green-500 text-sm font-semibold">Validé</span>
+                      <div className="space-y-2">
+                        <Link to={`/levels/${levelId}`}>
+                          <Button
+                            className="w-full btn-neon"
+                            data-testid={`start-level-${index}`}
+                          >
+                            Commencer / Continuer
+                          </Button>
+                        </Link>
+                        <div className="flex items-center justify-center gap-2 text-xs text-yellow-500">
+                          <Lock className="w-3 h-3" />
+                          <span>Formation obligatoire</span>
+                        </div>
                       </div>
                     )}
                   </CardContent>

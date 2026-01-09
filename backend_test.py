@@ -1435,16 +1435,20 @@ class AfroboostAPITester:
 
     def run_all_tests(self):
         """Run all test suites"""
-        print("🚀 Starting Afroboost API Tests")
+        print("🚀 Starting Afroboost API Tests - TRAINING SYSTEM FOCUS")
         print(f"🌐 Testing against: {self.base_url}")
         
-        # PRIORITY 1: Test the specific level document PDF from the request
+        # PRIORITY 1: Test NEW TRAINING SYSTEM - Level Content & Progress
+        print("\n🎯 PRIORITY 1: TESTING NEW TRAINING SYSTEM")
+        level_content_success = self.test_level_content_crud()
+        level_progress_success = self.test_level_progress_crud()
+        unlock_check_success = self.test_level_unlock_check()
+        training_flow_success = self.test_complete_training_flow_e2e()
+        
+        # PRIORITY 2: Test existing features
+        print("\n🎯 PRIORITY 2: TESTING EXISTING FEATURES")
         specific_level_pdf_success = self.test_specific_level_document_pdf()
-        
-        # PRIORITY 2: Test the main feature - CERTIFICATE VERIFICATION
         verification_success = self.test_certificate_verification()
-        
-        # PRIORITY 3: Test the training PDF feature
         training_pdf_success = self.test_training_summary_pdf()
         
         try:
@@ -1460,30 +1464,62 @@ class AfroboostAPITester:
         
         # Print final results
         print("\n" + "="*60)
-        print("FINAL TEST RESULTS")
+        print("FINAL TEST RESULTS - TRAINING SYSTEM FOCUS")
         print("="*60)
         print(f"📊 Tests Run: {self.tests_run}")
         print(f"✅ Tests Passed: {self.tests_passed}")
         print(f"❌ Tests Failed: {self.tests_run - self.tests_passed}")
         print(f"📈 Success Rate: {(self.tests_passed/self.tests_run)*100:.1f}%")
         
-        # CRITICAL FEATURE STATUS
-        if specific_level_pdf_success:
-            print("\n🎉 PRIORITY 1: Specific Level Document PDF (bf0dd6cb-7fa4-4ac6-80e7-8656971ec8d9) WORKING ✅")
+        # NEW TRAINING SYSTEM STATUS
+        print("\n🎯 NEW TRAINING SYSTEM STATUS:")
+        if level_content_success:
+            print("✅ Level Content CRUD: WORKING")
         else:
-            print("\n❌ PRIORITY 1: Specific Level Document PDF FAILED ❌")
+            print("❌ Level Content CRUD: FAILED")
+            
+        if level_progress_success:
+            print("✅ Level Progress Tracking: WORKING")
+        else:
+            print("❌ Level Progress Tracking: FAILED")
+            
+        if unlock_check_success:
+            print("✅ Level Unlock Check: WORKING")
+        else:
+            print("❌ Level Unlock Check: FAILED")
+            
+        if training_flow_success:
+            print("✅ Complete Training Flow E2E: WORKING")
+        else:
+            print("❌ Complete Training Flow E2E: FAILED")
+        
+        # EXISTING FEATURES STATUS
+        print("\n🎯 EXISTING FEATURES STATUS:")
+        if specific_level_pdf_success:
+            print("✅ Level Document PDF: WORKING")
+        else:
+            print("❌ Level Document PDF: FAILED")
             
         if verification_success:
-            print("🎉 PRIORITY 2: Certificate Verification endpoint WORKING ✅")
+            print("✅ Certificate Verification: WORKING")
         else:
-            print("❌ PRIORITY 2: Certificate Verification endpoint FAILED ❌")
+            print("❌ Certificate Verification: FAILED")
             
         if training_pdf_success:
-            print("🎉 PRIORITY 3: Training Summary PDF endpoint WORKING ✅")
+            print("✅ Training Summary PDF: WORKING")
         else:
-            print("❌ PRIORITY 3: Training Summary PDF endpoint FAILED ❌")
+            print("❌ Training Summary PDF: FAILED")
         
-        return 0 if specific_level_pdf_success and verification_success and training_pdf_success and self.tests_passed >= (self.tests_run * 0.8) else 1
+        # Overall success criteria
+        training_system_working = level_content_success and level_progress_success and unlock_check_success and training_flow_success
+        existing_features_working = specific_level_pdf_success and verification_success and training_pdf_success
+        
+        if training_system_working:
+            print("\n🎉 NEW TRAINING SYSTEM: FULLY FUNCTIONAL ✅")
+        else:
+            print("\n❌ NEW TRAINING SYSTEM: HAS ISSUES ❌")
+        
+        return 0 if training_system_working and self.tests_passed >= (self.tests_run * 0.8) else 1
 
 def main():
     tester = AfroboostAPITester()

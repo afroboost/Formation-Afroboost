@@ -312,9 +312,11 @@ const AdminPanel = () => {
           </CardContent>
         </Card>
 
-        <AdminPaymentConfig />
+        <AdminAccessComplete />
 
-        <AdminAccessManager />
+        <AdminPaymentHistory />
+
+        <AdminPaymentConfig />
 
         <AdminContentManager />
 

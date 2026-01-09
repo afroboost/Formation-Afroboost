@@ -542,34 +542,34 @@ async def download_level_document_pdf(document_id: str):
     
     # Title - AFROBOOST in white on purple
     c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 52)
+    c.setFont(UTF8_FONT_BOLD, 52)
     c.drawCentredString(width/2, height - 3.5*cm, "AFROBOOST")
     
     # Subtitle
-    c.setFont("Helvetica", 16)
+    c.setFont(UTF8_FONT, 16)
     c.drawCentredString(width/2, height - 5*cm, "Document de validation de niveau")
     
     # Main content area
     # Level name with purple accent
     c.setFillColor(colors.HexColor('#a855f7'))
-    c.setFont("Helvetica-Bold", 24)
+    c.setFont(UTF8_FONT_BOLD, 24)
     c.drawCentredString(width/2, height - 8*cm, level_name_fr.upper())
     
     # Student information section
     c.setFillColor(colors.HexColor('#2d2d2d'))
-    c.setFont("Helvetica-Bold", 14)
+    c.setFont(UTF8_FONT_BOLD, 14)
     
     # Apprenant label
     c.drawString(4*cm, height - 10*cm, "Apprenant :")
-    c.setFont("Helvetica-Bold", 18)
+    c.setFont(UTF8_FONT_BOLD, 18)
     c.setFillColor(colors.HexColor('#1a1a1a'))
     c.drawString(7.5*cm, height - 10*cm, doc['student_name'])
     
     # ID Étudiant
     c.setFillColor(colors.HexColor('#2d2d2d'))
-    c.setFont("Helvetica-Bold", 14)
+    c.setFont(UTF8_FONT_BOLD, 14)
     c.drawString(4*cm, height - 11*cm, "ID Étudiant :")
-    c.setFont("Helvetica", 14)
+    c.setFont(UTF8_FONT, 14)
     c.drawString(7.5*cm, height - 11*cm, doc['student_id'])
     
     # Official statement box
@@ -580,14 +580,14 @@ async def download_level_document_pdf(document_id: str):
     c.roundRect(3*cm, y_pos - 1*cm, width - 6*cm, 2*cm, 0.3*cm, fill=True, stroke=True)
     
     c.setFillColor(colors.HexColor('#1a1a1a'))
-    c.setFont("Helvetica-Oblique", 13)
+    c.setFont(UTF8_FONT_OBLIQUE, 13)
     c.drawCentredString(width/2, y_pos - 0.3*cm, "Ce document certifie que le niveau ci-dessus")
     c.drawCentredString(width/2, y_pos - 0.8*cm, "a été validé avec succès.")
     
     # Skills section
     skills_y = height - 16*cm
     c.setFillColor(colors.HexColor('#a855f7'))
-    c.setFont("Helvetica-Bold", 15)
+    c.setFont(UTF8_FONT_BOLD, 15)
     c.drawString(3.5*cm, skills_y, "COMPÉTENCES VALIDÉES")
     
     # Underline
@@ -597,7 +597,7 @@ async def download_level_document_pdf(document_id: str):
     
     # Skills list
     c.setFillColor(colors.HexColor('#2d2d2d'))
-    c.setFont("Helvetica", 11)
+    c.setFont(UTF8_FONT, 11)
     y_position = skills_y - 1*cm
     
     for skill in doc['skills']:
@@ -625,31 +625,31 @@ async def download_level_document_pdf(document_id: str):
     
     # Footer content
     c.setFillColor(colors.HexColor('#6b7280'))
-    c.setFont("Helvetica-Bold", 10)
+    c.setFont(UTF8_FONT_BOLD, 10)
     c.drawString(2.5*cm, footer_y - 0.8*cm, "ID du document :")
-    c.setFont("Helvetica", 10)
+    c.setFont(UTF8_FONT, 10)
     c.drawString(5.5*cm, footer_y - 0.8*cm, doc['document_id'])
     
-    c.setFont("Helvetica-Bold", 10)
+    c.setFont(UTF8_FONT_BOLD, 10)
     c.drawString(2.5*cm, footer_y - 1.4*cm, "Date de validation :")
     
     validated_date = doc['validated_at']
     if isinstance(validated_date, str):
         validated_date = datetime.fromisoformat(validated_date)
-    c.setFont("Helvetica", 10)
+    c.setFont(UTF8_FONT, 10)
     c.drawString(5.5*cm, footer_y - 1.4*cm, validated_date.strftime('%d/%m/%Y'))
     
     # Verification text
-    c.setFont("Helvetica-Bold", 10)
+    c.setFont(UTF8_FONT_BOLD, 10)
     c.drawString(2.5*cm, footer_y - 2*cm, "Vérifier :")
-    c.setFont("Helvetica", 9)
+    c.setFont(UTF8_FONT, 9)
     c.setFillColor(colors.HexColor('#a855f7'))
     verification_url = f"afroboost.com/verify-certificate?id={doc['document_id']}"
     c.drawString(4.2*cm, footer_y - 2*cm, verification_url)
     
     # Bottom footer
     c.setFillColor(colors.HexColor('#9ca3af'))
-    c.setFont("Helvetica-Oblique", 9)
+    c.setFont(UTF8_FONT_OBLIQUE, 9)
     c.drawCentredString(width/2, 1.2*cm, "Formation Officielle Afroboost — Imprimable & Vérifiable")
     
     # Purple accent line at bottom

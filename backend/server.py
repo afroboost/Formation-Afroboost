@@ -15,6 +15,24 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+# Register UTF-8 compatible fonts for French accents
+try:
+    # Use DejaVuSans which has excellent UTF-8 support
+    pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
+    pdfmetrics.registerFont(TTFont('DejaVuSans-Oblique', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'))
+    UTF8_FONT = 'DejaVuSans'
+    UTF8_FONT_BOLD = 'DejaVuSans-Bold'
+    UTF8_FONT_OBLIQUE = 'DejaVuSans-Oblique'
+except Exception as e:
+    # Fallback to Helvetica if fonts not available
+    logging.warning(f"Could not load DejaVuSans fonts: {e}. Using Helvetica (limited UTF-8 support)")
+    UTF8_FONT = 'Helvetica'
+    UTF8_FONT_BOLD = 'Helvetica-Bold'
+    UTF8_FONT_OBLIQUE = 'Helvetica-Oblique'
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -790,9 +808,16 @@ async def get_user_all_progress(user_id: str):
 
 @api_router.get("/level-progress/admin/all")
 async def get_all_progress_admin():
-    """Admin endpoint to get all progress records"""
-    progress_list = await db.user_level_progress.find({}, {"_id": 0}).to_list(1000)
-    return progress_list
+    """Admin endpoint to get all progress records - always returns array"""
+    try:
+        progress_list = await db.user_level_progress.find({}, {"_id": 0}).to_list(1000)
+        # Ensure we always return a list, never None or other types
+        if progress_list is None:
+            return []
+        return progress_list
+    except Exception as e:
+        logging.error(f"Error fetching admin progress: {e}")
+        return []
 
 @api_router.get("/level-progress/check-unlock/{user_id}/{level_id}")
 async def check_level_unlocked(user_id: str, level_id: str):

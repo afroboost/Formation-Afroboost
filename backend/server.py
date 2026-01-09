@@ -940,6 +940,61 @@ async def admin_recovery_request(recovery: AdminRecovery):
         "message": "Demande envoyée avec succès"
     }
 
+# =====================
+# LEVEL PAYMENT CONFIG ENDPOINTS
+# =====================
+
+@api_router.post("/level-payment-config")
+async def create_or_update_payment_config(config: LevelPaymentConfigCreate):
+    """Admin creates or updates payment configuration for a level"""
+    existing = await db.level_payment_config.find_one({"level_id": config.level_id})
+    
+    if existing:
+        # Update
+        update_data = config.model_dump()
+        update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+        
+        await db.level_payment_config.update_one(
+            {"level_id": config.level_id},
+            {"$set": update_data}
+        )
+        result = await db.level_payment_config.find_one({"level_id": config.level_id}, {"_id": 0})
+    else:
+        # Create
+        config_obj = LevelPaymentConfig(**config.model_dump())
+        doc = config_obj.model_dump()
+        doc['updated_at'] = doc['updated_at'].isoformat()
+        
+        await db.level_payment_config.insert_one(doc)
+        result = doc
+    
+    return result
+
+@api_router.get("/level-payment-config/{level_id}")
+async def get_payment_config(level_id: str):
+    """Get payment configuration for a specific level"""
+    config = await db.level_payment_config.find_one({"level_id": level_id}, {"_id": 0})
+    
+    if not config:
+        # Return default locked config
+        return {
+            "level_id": level_id,
+            "payment_mode": "both",
+            "price": None,
+            "currency": "CHF",
+            "enabled_payment_methods": [],
+            "payment_instructions": {},
+            "volunteer_description": ""
+        }
+    
+    return config
+
+@api_router.get("/level-payment-config")
+async def get_all_payment_configs():
+    """Get all payment configurations"""
+    configs = await db.level_payment_config.find({}, {"_id": 0}).to_list(1000)
+    return configs
+
 # Include the router in the main app
 app.include_router(api_router)
 

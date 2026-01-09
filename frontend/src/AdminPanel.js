@@ -301,6 +301,8 @@ const AdminPanel = () => {
           </CardContent>
         </Card>
 
+        <AdminContentManager />
+
         <div className="text-center mt-12 space-x-4">
           <Link to="/levels">
             <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="go-to-levels-admin">

@@ -131,7 +131,7 @@ const AdminPanel = () => {
         <div className="grid lg:grid-cols-2 gap-8 mb-8">
           <Card className="card-dark border-neon" data-testid="create-exam-date-card">
             <CardHeader>
-              <CardTitle className="text-2xl text-white">Créer une Date d'Examen</CardTitle>
+              <CardTitle className="text-2xl text-white">Créer une Date d&apos;Examen</CardTitle>
               <CardDescription className="text-gray-400">Ajouter une nouvelle session</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

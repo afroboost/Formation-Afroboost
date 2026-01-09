@@ -175,6 +175,27 @@ class AdminAuth(BaseModel):
 class AdminRecovery(BaseModel):
     email: str
 
+class LevelPaymentConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    level_id: str
+    payment_mode: str  # "money", "volunteer", "both"
+    price: Optional[float] = None
+    currency: str = "CHF"  # CHF, EUR
+    enabled_payment_methods: List[str] = []  # twint, stripe, orange_money, mtn_money
+    payment_instructions: dict = {}  # {method: instruction_text}
+    volunteer_description: str = ""
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LevelPaymentConfigCreate(BaseModel):
+    level_id: str
+    payment_mode: str
+    price: Optional[float] = None
+    currency: str = "CHF"
+    enabled_payment_methods: List[str] = []
+    payment_instructions: dict = {}
+    volunteer_description: str = ""
+
 # Hardcoded admin secret (in production, use env variable)
 ADMIN_SECRET_ID = os.environ.get('ADMIN_SECRET_ID', 'AFRO-ADMIN-2025')
 

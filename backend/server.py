@@ -254,6 +254,32 @@ async def get_student_certificates(student_id: str):
     
     return certificates
 
+@api_router.get("/certificates/verify/{certificate_id}")
+async def verify_certificate(certificate_id: str):
+    """
+    Public endpoint - verify certificate validity by certificate_id
+    Returns public certificate info without sensitive data
+    """
+    # Search by certificate_id field (not internal id)
+    cert = await db.certificates.find_one({"certificate_id": certificate_id}, {"_id": 0})
+    
+    if not cert:
+        raise HTTPException(status_code=404, detail="Certificate not found or invalid")
+    
+    # Return only public information
+    issued_date = cert['issued_at']
+    if isinstance(issued_date, str):
+        issued_date = datetime.fromisoformat(issued_date)
+    
+    return {
+        "valid": True,
+        "certificate_id": cert['certificate_id'],
+        "student_name": cert['student_name'],
+        "certificate_type": cert['certificate_type'],
+        "issued_at": issued_date.strftime('%d/%m/%Y'),
+        "status": "VALID"
+    }
+
 @api_router.get("/certificates/{certificate_id}/pdf")
 async def download_certificate_pdf(certificate_id: str):
     cert = await db.certificates.find_one({"id": certificate_id}, {"_id": 0})

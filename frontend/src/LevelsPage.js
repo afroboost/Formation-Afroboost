@@ -324,6 +324,17 @@ const LevelsPage = () => {
               const paymentStatus = unlockStatus.payment_status || 'pending';
               const volunteerStatus = unlockStatus.volunteer_status || 'pending';
               
+              // Get payment config for this level
+              const paymentConfig = paymentConfigs[levelId] || {
+                payment_mode: 'both',
+                price: null,
+                enabled_payment_methods: [],
+                volunteer_description: ''
+              };
+              
+              const showMoneyOption = paymentConfig.payment_mode === 'money' || paymentConfig.payment_mode === 'both';
+              const showVolunteerOption = paymentConfig.payment_mode === 'volunteer' || paymentConfig.payment_mode === 'both';
+              
               return (
                 <Card 
                   key={index} 

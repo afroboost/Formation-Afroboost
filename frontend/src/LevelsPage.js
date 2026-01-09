@@ -67,6 +67,38 @@ const LevelsPage = () => {
   const [myDocuments, setMyDocuments] = useState([]);
   const [showValidationForm, setShowValidationForm] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState(null);
+  const [levelUnlockStatus, setLevelUnlockStatus] = useState({});
+
+  useEffect(() => {
+    // Load from localStorage
+    const storedId = localStorage.getItem('afroboost_user_id');
+    const storedName = localStorage.getItem('afroboost_user_name');
+    if (storedId) {
+      setStudentId(storedId);
+      setStudentName(storedName || '');
+      fetchMyDocuments(storedId);
+      checkAllLevelsUnlock(storedId);
+    }
+  }, []);
+
+  const checkAllLevelsUnlock = async (uid) => {
+    const statuses = {};
+    for (let i = 0; i < AVAILABLE_LEVELS.length; i++) {
+      const levelId = `level-${i + 1}`;
+      try {
+        const response = await axios.get(`${API}/level-progress/check-unlock/${uid}/${levelId}`);
+        statuses[levelId] = response.data;
+      } catch (error) {
+        statuses[levelId] = { unlocked: false };
+      }
+    }
+    setLevelUnlockStatus(statuses);
+  };
+
+  const saveUserInfo = (id, name) => {
+    localStorage.setItem('afroboost_user_id', id);
+    localStorage.setItem('afroboost_user_name', name);
+  };
 
   const fetchMyDocuments = async (id) => {
     if (!id) return;
@@ -79,13 +111,22 @@ const LevelsPage = () => {
     }
   };
 
-  const handleValidateLevel = async (level) => {
+  const handleValidateLevel = async (level, levelId) => {
     if (!studentId || !studentName) {
       toast.error('Veuillez entrer votre ID et nom');
       return;
     }
 
+    // Check unlock status first
     try {
+      const unlockRes = await axios.get(`${API}/level-progress/check-unlock/${studentId}/${levelId}`);
+      
+      if (!unlockRes.data.unlocked) {
+        toast.error('Vous devez compléter la formation avant de valider ce niveau.');
+        return;
+      }
+
+      // Proceed with validation
       await axios.post(`${API}/level-documents`, {
         student_id: studentId,
         student_name: studentName,
@@ -94,6 +135,7 @@ const LevelsPage = () => {
       });
       toast.success('Niveau validé! Document généré.');
       fetchMyDocuments(studentId);
+      checkAllLevelsUnlock(studentId);
       setShowValidationForm(false);
       setSelectedLevel(null);
     } catch (error) {

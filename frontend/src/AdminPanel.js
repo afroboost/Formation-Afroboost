@@ -122,10 +122,13 @@ const AdminPanel = () => {
           <h1 className="text-5xl font-bold mb-4 neon-glow" data-testid="admin-title">
             ADMIN PANEL
           </h1>
-          <p className="text-gray-400">Gestion des examens et certifications</p>
+          <p className="text-gray-400">Gestion des examens et certifications Afroboost</p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 mb-12">
+        {/* ==================== */}
+        {/* SECTION 1: CRÉATION DATES D'EXAMEN */}
+        {/* ==================== */}
+        <div className="grid lg:grid-cols-2 gap-8 mb-8">
           <Card className="card-dark border-neon" data-testid="create-exam-date-card">
             <CardHeader>
               <CardTitle className="text-2xl text-white">Créer une Date d'Examen</CardTitle>

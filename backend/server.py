@@ -418,12 +418,12 @@ async def download_certificate_pdf(certificate_id: str):
     
     # Title - AFROBOOST in neon purple
     c.setFillColor(colors.HexColor('#a855f7'))
-    c.setFont("Helvetica-Bold", 48)
+    c.setFont(UTF8_FONT_BOLD, 48)
     c.drawCentredString(width/2, height - 5*cm, "AFROBOOST")
     
     # Subtitle
     c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 32)
+    c.setFont(UTF8_FONT_BOLD, 32)
     c.drawCentredString(width/2, height - 7*cm, "CERTIFICATION OFFICIELLE")
     
     # Certificate type
@@ -433,12 +433,12 @@ async def download_certificate_pdf(certificate_id: str):
         "hybrid": "INSTRUCTEUR HYBRIDE"
     }
     c.setFillColor(colors.HexColor('#c084fc'))
-    c.setFont("Helvetica-Bold", 24)
+    c.setFont(UTF8_FONT_BOLD, 24)
     c.drawCentredString(width/2, height - 9*cm, cert_type_text.get(cert['certificate_type'], 'INSTRUCTEUR'))
     
     # Instructor name
     c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 36)
+    c.setFont(UTF8_FONT_BOLD, 36)
     c.drawCentredString(width/2, height - 12*cm, cert['student_name'].upper())
     
     # Description based on type
@@ -448,12 +448,12 @@ async def download_certificate_pdf(certificate_id: str):
         "hybrid": "Autorisé à enseigner Afroboost en ligne et en présentiel."
     }
     c.setFillColor(colors.HexColor('#e5e5e5'))
-    c.setFont("Helvetica", 16)
+    c.setFont(UTF8_FONT, 16)
     c.drawCentredString(width/2, height - 14*cm, cert_desc.get(cert['certificate_type'], ''))
     
     # Certificate details
     c.setFillColor(colors.HexColor('#a855f7'))
-    c.setFont("Helvetica-Bold", 12)
+    c.setFont(UTF8_FONT_BOLD, 12)
     c.drawString(4*cm, 6*cm, f"ID CERTIFICAT: {cert['certificate_id']}")
     
     issued_date = cert['issued_at']
@@ -463,7 +463,7 @@ async def download_certificate_pdf(certificate_id: str):
     
     # Footer
     c.setFillColor(colors.HexColor('#71717a'))
-    c.setFont("Helvetica-Oblique", 10)
+    c.setFont(UTF8_FONT_OBLIQUE, 10)
     c.drawCentredString(width/2, 3*cm, "Certification Officielle Afroboost – Vérifiable")
     
     c.save()

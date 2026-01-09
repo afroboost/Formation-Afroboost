@@ -1046,6 +1046,403 @@ async def admin_recovery_request(recovery: AdminRecovery):
     }
 
 # =====================
+# USER ACCESS MANAGEMENT ENDPOINTS (COMPLETE CRUD)
+# =====================
+
+@api_router.get("/access")
+async def get_all_access(
+    user_id: Optional[str] = None,
+    level_id: Optional[str] = None,
+    status: Optional[str] = None
+):
+    """Get all user access records with optional filters"""
+    query = {}
+    if user_id:
+        query["user_id"] = user_id
+    if level_id:
+        query["level_id"] = level_id
+    if status:
+        query["status"] = status
+    
+    access_list = await db.user_access.find(query, {"_id": 0}).to_list(1000)
+    
+    # Check for expired access and update status
+    now = datetime.now(timezone.utc)
+    for access in access_list:
+        if access.get("status") == "active" and access.get("expires_at"):
+            expires_at = access["expires_at"]
+            if isinstance(expires_at, str):
+                expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            if expires_at < now:
+                # Mark as expired
+                await db.user_access.update_one(
+                    {"id": access["id"]},
+                    {"$set": {"status": "expired", "updated_at": now.isoformat()}}
+                )
+                access["status"] = "expired"
+    
+    return access_list
+
+@api_router.get("/access/{access_id}")
+async def get_access_by_id(access_id: str):
+    """Get a specific access record by ID"""
+    access = await db.user_access.find_one({"id": access_id}, {"_id": 0})
+    if not access:
+        raise HTTPException(status_code=404, detail="Access not found")
+    return access
+
+@api_router.post("/access")
+async def create_access(input: UserAccessCreate):
+    """Admin creates a new access for a user"""
+    # Check if access already exists
+    existing = await db.user_access.find_one({
+        "user_id": input.user_id,
+        "level_id": input.level_id,
+        "status": {"$in": ["active", "pending"]}
+    })
+    
+    if existing:
+        raise HTTPException(
+            status_code=400, 
+            detail="Un accès actif ou en attente existe déjà pour cet utilisateur et ce niveau"
+        )
+    
+    # Create new access
+    access = UserAccess(
+        user_id=input.user_id,
+        level_id=input.level_id,
+        access_type=input.access_type,
+        status=input.status,
+        granted_at=datetime.now(timezone.utc) if input.status == "active" else None,
+        expires_at=datetime.fromisoformat(input.expires_at) if input.expires_at else None
+    )
+    
+    doc = access.model_dump()
+    doc["created_at"] = doc["created_at"].isoformat()
+    doc["updated_at"] = doc["updated_at"].isoformat()
+    if doc["granted_at"]:
+        doc["granted_at"] = doc["granted_at"].isoformat()
+    if doc["expires_at"]:
+        doc["expires_at"] = doc["expires_at"].isoformat()
+    
+    await db.user_access.insert_one(doc)
+    
+    # Also update user_level_progress for backward compatibility
+    if input.status == "active":
+        await db.user_level_progress.update_one(
+            {"user_id": input.user_id, "level_id": input.level_id},
+            {"$set": {
+                "access_granted": True,
+                "payment_status": "validated" if input.access_type == "payment" else "not_required",
+                "volunteer_status": "validated" if input.access_type == "volunteer" else "not_applicable",
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+    
+    result = await db.user_access.find_one({"id": access.id}, {"_id": 0})
+    return result
+
+@api_router.put("/access/{access_id}")
+async def update_access(access_id: str, input: UserAccessUpdate):
+    """Admin updates an existing access"""
+    access = await db.user_access.find_one({"id": access_id})
+    if not access:
+        raise HTTPException(status_code=404, detail="Access not found")
+    
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if input.status is not None:
+        update_data["status"] = input.status
+        if input.status == "active" and not access.get("granted_at"):
+            update_data["granted_at"] = datetime.now(timezone.utc).isoformat()
+    
+    if input.access_type is not None:
+        update_data["access_type"] = input.access_type
+    
+    if input.expires_at is not None:
+        update_data["expires_at"] = input.expires_at if input.expires_at else None
+    
+    await db.user_access.update_one({"id": access_id}, {"$set": update_data})
+    
+    # Update user_level_progress for backward compatibility
+    updated_access = await db.user_access.find_one({"id": access_id}, {"_id": 0})
+    if updated_access:
+        is_active = updated_access.get("status") == "active"
+        await db.user_level_progress.update_one(
+            {"user_id": updated_access["user_id"], "level_id": updated_access["level_id"]},
+            {"$set": {
+                "access_granted": is_active,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+    
+    return updated_access
+
+@api_router.delete("/access/{access_id}")
+async def delete_access(access_id: str):
+    """Admin deletes an access record"""
+    access = await db.user_access.find_one({"id": access_id})
+    if not access:
+        raise HTTPException(status_code=404, detail="Access not found")
+    
+    # Remove from user_access
+    await db.user_access.delete_one({"id": access_id})
+    
+    # Update user_level_progress - revoke access
+    await db.user_level_progress.update_one(
+        {"user_id": access["user_id"], "level_id": access["level_id"]},
+        {"$set": {
+            "access_granted": False,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"success": True, "message": "Accès supprimé avec succès"}
+
+@api_router.post("/access/{access_id}/revoke")
+async def revoke_access(access_id: str, input: UserAccessRevoke):
+    """Admin revokes an active access"""
+    access = await db.user_access.find_one({"id": access_id})
+    if not access:
+        raise HTTPException(status_code=404, detail="Access not found")
+    
+    if access.get("status") != "active":
+        raise HTTPException(status_code=400, detail="Seuls les accès actifs peuvent être révoqués")
+    
+    now = datetime.now(timezone.utc)
+    update_data = {
+        "status": "revoked",
+        "revoked_at": now.isoformat(),
+        "revoked_by": input.revoked_by,
+        "revoke_reason": input.reason,
+        "updated_at": now.isoformat()
+    }
+    
+    await db.user_access.update_one({"id": access_id}, {"$set": update_data})
+    
+    # Update user_level_progress - revoke access
+    await db.user_level_progress.update_one(
+        {"user_id": access["user_id"], "level_id": access["level_id"]},
+        {"$set": {
+            "access_granted": False,
+            "updated_at": now.isoformat()
+        }}
+    )
+    
+    result = await db.user_access.find_one({"id": access_id}, {"_id": 0})
+    return result
+
+# =====================
+# PAYMENT TRANSACTION ENDPOINTS (MULTI-REGION)
+# =====================
+
+@api_router.get("/payments/history")
+async def get_payment_history(
+    user_id: Optional[str] = None,
+    level_id: Optional[str] = None,
+    status: Optional[str] = None,
+    payment_method: Optional[str] = None
+):
+    """Get payment transaction history with filters"""
+    query = {}
+    if user_id:
+        query["user_id"] = user_id
+    if level_id:
+        query["level_id"] = level_id
+    if status:
+        query["status"] = status
+    if payment_method:
+        query["payment_method"] = payment_method
+    
+    transactions = await db.payment_transactions.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return transactions
+
+@api_router.get("/payments/{transaction_id}")
+async def get_payment_by_id(transaction_id: str):
+    """Get a specific payment transaction"""
+    transaction = await db.payment_transactions.find_one({"id": transaction_id}, {"_id": 0})
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return transaction
+
+@api_router.post("/payments/initiate")
+async def initiate_payment(input: PaymentInitiate):
+    """Initiate a payment for level access"""
+    # Get level payment config
+    config = await db.level_payment_config.find_one({"level_id": input.level_id}, {"_id": 0})
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration de paiement non trouvée pour ce niveau")
+    
+    # Check if payment method is enabled
+    if input.payment_method not in config.get("enabled_payment_methods", []):
+        raise HTTPException(status_code=400, detail="Méthode de paiement non activée pour ce niveau")
+    
+    # Create transaction record
+    currency = input.currency or config.get("currency", "CHF")
+    external_ref = f"AFRO-{uuid.uuid4().hex[:8].upper()}"
+    
+    transaction = PaymentTransaction(
+        user_id=input.user_id,
+        level_id=input.level_id,
+        amount=config.get("price", 0),
+        currency=currency,
+        payment_method=input.payment_method,
+        external_reference=external_ref,
+        status="pending",
+        metadata={
+            "return_url": input.return_url,
+            "level_name": config.get("level_name", input.level_id)
+        }
+    )
+    
+    doc = transaction.model_dump()
+    doc["created_at"] = doc["created_at"].isoformat()
+    
+    await db.payment_transactions.insert_one(doc)
+    
+    # Generate payment response based on method
+    response = {
+        "transaction_id": transaction.id,
+        "external_reference": external_ref,
+        "amount": transaction.amount,
+        "currency": currency,
+        "payment_method": input.payment_method,
+        "status": "pending"
+    }
+    
+    # Add method-specific data
+    if input.payment_method == "stripe":
+        # In production: create Stripe PaymentIntent here
+        response["action"] = "redirect"
+        response["message"] = "Stripe integration - créer PaymentIntent avec clé API"
+        response["instructions"] = config.get("payment_instructions", {}).get("stripe", "")
+    
+    elif input.payment_method in ["twint_api", "twint_link"]:
+        response["action"] = "qr_code" if input.payment_method == "twint_api" else "link"
+        response["instructions"] = config.get("payment_instructions", {}).get("twint", "")
+    
+    elif input.payment_method.startswith("mobile_money"):
+        provider = input.payment_method.replace("mobile_money_", "")
+        response["action"] = "ussd_prompt"
+        response["provider"] = provider
+        response["instructions"] = config.get("payment_instructions", {}).get(input.payment_method, "")
+        response["message"] = f"Mobile Money {provider.upper()} - en attente d'intégration API"
+    
+    elif input.payment_method.startswith("aggregator"):
+        aggregator = input.payment_method.replace("aggregator_", "")
+        response["action"] = "redirect"
+        response["aggregator"] = aggregator
+        response["message"] = f"Agrégateur {aggregator.upper()} - en attente d'intégration API"
+    
+    else:
+        response["action"] = "manual"
+        response["instructions"] = config.get("payment_instructions", {}).get(input.payment_method, "Paiement manuel")
+    
+    return response
+
+@api_router.post("/payments/webhook")
+async def payment_webhook(input: PaymentWebhook):
+    """Handle payment webhook from providers (Stripe, TWINT, Mobile Money, etc.)"""
+    # Find transaction
+    transaction = await db.payment_transactions.find_one({
+        "$or": [
+            {"id": input.transaction_id},
+            {"external_reference": input.transaction_id},
+            {"provider_transaction_id": input.transaction_id}
+        ]
+    })
+    
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    now = datetime.now(timezone.utc)
+    update_data = {
+        "webhook_received": True,
+        "provider_transaction_id": input.metadata.get("provider_id", input.transaction_id),
+        "updated_at": now.isoformat()
+    }
+    
+    if input.status == "completed" or input.status == "succeeded":
+        update_data["status"] = "completed"
+        update_data["completed_at"] = now.isoformat()
+        
+        # Create UserAccess automatically
+        access = UserAccess(
+            user_id=transaction["user_id"],
+            level_id=transaction["level_id"],
+            status="active",
+            access_type="payment",
+            granted_at=now,
+            payment_id=transaction["id"]
+        )
+        
+        access_doc = access.model_dump()
+        access_doc["created_at"] = access_doc["created_at"].isoformat()
+        access_doc["updated_at"] = access_doc["updated_at"].isoformat()
+        access_doc["granted_at"] = access_doc["granted_at"].isoformat()
+        
+        await db.user_access.insert_one(access_doc)
+        update_data["access_id"] = access.id
+        
+        # Update user_level_progress for backward compatibility
+        await db.user_level_progress.update_one(
+            {"user_id": transaction["user_id"], "level_id": transaction["level_id"]},
+            {"$set": {
+                "access_granted": True,
+                "payment_status": "validated",
+                "updated_at": now.isoformat()
+            }},
+            upsert=True
+        )
+    
+    elif input.status == "failed":
+        update_data["status"] = "failed"
+    
+    elif input.status == "refunded":
+        update_data["status"] = "refunded"
+        # Revoke access if exists
+        if transaction.get("access_id"):
+            await db.user_access.update_one(
+                {"id": transaction["access_id"]},
+                {"$set": {
+                    "status": "revoked",
+                    "revoked_at": now.isoformat(),
+                    "revoked_by": "system",
+                    "revoke_reason": "Paiement remboursé"
+                }}
+            )
+    
+    await db.payment_transactions.update_one(
+        {"id": transaction["id"]},
+        {"$set": update_data}
+    )
+    
+    return {"success": True, "status": update_data.get("status", input.status)}
+
+@api_router.post("/payments/{transaction_id}/complete")
+async def complete_payment_manual(transaction_id: str):
+    """Admin manually completes a payment (for manual verification)"""
+    transaction = await db.payment_transactions.find_one({"id": transaction_id})
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if transaction.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Seules les transactions en attente peuvent être complétées")
+    
+    # Simulate webhook completion
+    webhook_data = PaymentWebhook(
+        provider="manual",
+        event_type="payment.completed",
+        transaction_id=transaction_id,
+        status="completed",
+        metadata={"completed_by": "admin"}
+    )
+    
+    return await payment_webhook(webhook_data)
+
+# =====================
 # LEVEL PAYMENT CONFIG ENDPOINTS
 # =====================
 

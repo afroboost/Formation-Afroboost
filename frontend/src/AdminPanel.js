@@ -25,6 +25,7 @@ const AdminPanel = () => {
   const navigate = useNavigate();
   const [examDates, setExamDates] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [showAllBookings, setShowAllBookings] = useState(false);
   const [newDate, setNewDate] = useState({
     date: '',
     time: '',

@@ -455,7 +455,8 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<ExamPage />} />
+          <Route path="/" element={<LevelsPage />} />
+          <Route path="/levels" element={<LevelsPage />} />
           <Route path="/exam" element={<ExamPage />} />
           <Route path="/results/:bookingId" element={<ResultsPage />} />
           <Route path="/diplomas" element={<DiplomasPage />} />

@@ -458,6 +458,7 @@ function App() {
           <Route path="/exam" element={<ExamPage />} />
           <Route path="/results/:bookingId" element={<ResultsPage />} />
           <Route path="/diplomas" element={<DiplomasPage />} />
+          <Route path="/admin" element={<AdminPanel />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" />

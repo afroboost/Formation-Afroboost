@@ -9,6 +9,7 @@ import { Trash2, Calendar, Users, CheckCircle, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AdminContentManager from '@/AdminContentManager';
 import AdminAccessManager from '@/AdminAccessManager';
+import AdminPaymentConfig from '@/AdminPaymentConfig';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

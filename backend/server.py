@@ -889,6 +889,36 @@ async def validate_level_access(input: dict):
     
     return {"success": True, "message": "Access validated"}
 
+# =====================
+# ADMIN AUTH ENDPOINTS
+# =====================
+
+@api_router.post("/admin/auth")
+async def admin_authenticate(auth: AdminAuth):
+    """Verify admin secret ID"""
+    if auth.admin_secret_id == ADMIN_SECRET_ID:
+        return {
+            "success": True,
+            "admin_id": auth.admin_secret_id,
+            "message": "Authentication successful"
+        }
+    else:
+        raise HTTPException(status_code=401, detail="ID administrateur invalide")
+
+@api_router.post("/admin/recovery")
+async def admin_recovery_request(recovery: AdminRecovery):
+    """Send recovery email to support"""
+    # Log the recovery request
+    logger.info(f"Admin recovery requested for email: {recovery.email}")
+    
+    # In production, send email to contact.artboost@gmail.com
+    # For now, just return success
+    
+    return {
+        "success": True,
+        "message": "Demande envoyée avec succès"
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 

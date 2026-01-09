@@ -153,9 +153,18 @@ const LevelsPage = () => {
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-white" data-testid="levels-subtitle">
             Parcours de Formation
           </h2>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-6">
             Validez vos niveaux et téléchargez vos documents de progression
           </p>
+          <Button
+            onClick={downloadTrainingSummary}
+            variant="outline"
+            className="border-purple-500 text-purple-400 hover:bg-purple-500/10"
+            data-testid="download-training-summary-button"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Télécharger le Résumé de Formation (PDF)
+          </Button>
         </div>
 
         <Card className="card-dark border-neon mb-12" data-testid="student-profile-card">

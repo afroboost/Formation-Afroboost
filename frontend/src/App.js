@@ -90,17 +90,26 @@ const ExamPage = () => {
   return (
     <div className="min-h-screen py-12 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <h1 className="text-5xl sm:text-6xl font-bold mb-6 neon-glow" data-testid="exam-title">
             AFROBOOST
           </h1>
           <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-white" data-testid="exam-subtitle">
             Examen de Certification
           </h2>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto" data-testid="exam-description">
+          <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-4" data-testid="exam-description">
             Vous êtes sur le point de passer votre examen en ligne en direct.
             Cet examen valide votre technique, votre pédagogie et votre énergie.
           </p>
+          <Button
+            onClick={downloadTrainingSummary}
+            variant="outline"
+            className="border-purple-500 text-purple-400 hover:bg-purple-500/10"
+            data-testid="download-training-summary-exam"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Vue d'Ensemble du Programme (PDF)
+          </Button>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 mb-12">

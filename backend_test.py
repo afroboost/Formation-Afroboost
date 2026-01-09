@@ -790,7 +790,10 @@ class AfroboostAPITester:
         print("🚀 Starting Afroboost API Tests")
         print(f"🌐 Testing against: {self.base_url}")
         
-        # PRIORITY 1: Test the main feature first
+        # PRIORITY 1: Test the main feature first - CERTIFICATE VERIFICATION
+        verification_success = self.test_certificate_verification()
+        
+        # PRIORITY 2: Test the training PDF feature
         training_pdf_success = self.test_training_summary_pdf()
         
         try:
@@ -814,12 +817,17 @@ class AfroboostAPITester:
         print(f"📈 Success Rate: {(self.tests_passed/self.tests_run)*100:.1f}%")
         
         # CRITICAL FEATURE STATUS
-        if training_pdf_success:
-            print("\n🎉 CRITICAL: Training Summary PDF endpoint WORKING ✅")
+        if verification_success:
+            print("\n🎉 CRITICAL: Certificate Verification endpoint WORKING ✅")
         else:
-            print("\n❌ CRITICAL: Training Summary PDF endpoint FAILED ❌")
+            print("\n❌ CRITICAL: Certificate Verification endpoint FAILED ❌")
+            
+        if training_pdf_success:
+            print("🎉 CRITICAL: Training Summary PDF endpoint WORKING ✅")
+        else:
+            print("❌ CRITICAL: Training Summary PDF endpoint FAILED ❌")
         
-        return 0 if training_pdf_success and self.tests_passed >= (self.tests_run * 0.8) else 1
+        return 0 if verification_success and training_pdf_success and self.tests_passed >= (self.tests_run * 0.8) else 1
 
 def main():
     tester = AfroboostAPITester()

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Download, CheckCircle, GraduationCap, Award } from 'lucide-react';
+import { Download, CheckCircle, GraduationCap, Award, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;

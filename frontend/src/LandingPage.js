@@ -163,10 +163,20 @@ const LandingPage = () => {
             <Button
               onClick={downloadTrainingSummary}
               className="btn-neon text-lg px-10 py-6"
+              disabled={isDownloading}
               data-testid="cta-download-summary-button"
             >
-              <Download className="w-5 h-5 mr-2" />
-              Télécharger le Résumé de Formation (PDF)
+              {isDownloading ? (
+                <>
+                  <span className="spinner"></span>
+                  Téléchargement...
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5 mr-2" />
+                  Télécharger le Résumé de Formation (PDF)
+                </>
+              )}
             </Button>
             <p className="text-gray-400 text-sm mt-4">
               ✅ Gratuit • Aucune inscription requise • Document officiel imprimable

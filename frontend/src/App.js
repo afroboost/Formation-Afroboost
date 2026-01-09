@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Calendar, Download, CheckCircle, XCircle, Video, Clock, Users } from 'lucide-react';
 import AdminPanel from '@/AdminPanel';
 import LevelsPage from '@/LevelsPage';
+import LandingPage from '@/LandingPage';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

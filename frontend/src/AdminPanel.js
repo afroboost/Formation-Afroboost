@@ -71,7 +71,7 @@ const AdminPanel = () => {
 
     try {
       await axios.post(`${API}/exam-dates`, newDate);
-      toast.success('Date d\'examen créée!');
+      toast.success('Date créée avec succès!');
       fetchExamDates();
       setNewDate({ date: '', time: '', meeting_link: '', available_slots: 10 });
     } catch (error) {

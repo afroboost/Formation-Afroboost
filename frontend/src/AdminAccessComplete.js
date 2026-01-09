@@ -449,7 +449,7 @@ const AdminAccessComplete = () => {
               </Select>
             </div>
             <div>
-              <Label className="text-gray-300">Date d'expiration (optionnel)</Label>
+              <Label className="text-gray-300">Date d&apos;expiration (optionnel)</Label>
               <Input
                 type="date"
                 value={formData.expires_at}
@@ -465,7 +465,7 @@ const AdminAccessComplete = () => {
             </Button>
             <Button onClick={handleCreate} className="btn-neon">
               <Plus className="w-4 h-4 mr-2" />
-              Créer l'accès
+              Créer l&apos;accès
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -475,7 +475,7 @@ const AdminAccessComplete = () => {
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="bg-gray-900 border-gray-700">
           <DialogHeader>
-            <DialogTitle className="text-white">Modifier l'accès</DialogTitle>
+            <DialogTitle className="text-white">Modifier l&apos;accès</DialogTitle>
             <DialogDescription className="text-gray-400">
               Utilisateur: {selectedAccess?.user_id} - {LEVELS.find(l => l.id === selectedAccess?.level_id)?.name}
             </DialogDescription>
@@ -499,7 +499,7 @@ const AdminAccessComplete = () => {
               </Select>
             </div>
             <div>
-              <Label className="text-gray-300">Type d'accès</Label>
+              <Label className="text-gray-300">Type d&apos;accès</Label>
               <Select 
                 value={formData.access_type} 
                 onValueChange={(v) => setFormData({...formData, access_type: v})}
@@ -515,7 +515,7 @@ const AdminAccessComplete = () => {
               </Select>
             </div>
             <div>
-              <Label className="text-gray-300">Date d'expiration</Label>
+              <Label className="text-gray-300">Date d&apos;expiration</Label>
               <Input
                 type="date"
                 value={formData.expires_at}
@@ -541,10 +541,10 @@ const AdminAccessComplete = () => {
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Ban className="w-5 h-5 text-orange-400" />
-              Révoquer l'accès
+              Révoquer l&apos;accès
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Cette action désactivera immédiatement l'accès de l'utilisateur.
+              Cette action désactivera immédiatement l&apos;accès de l&apos;utilisateur.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -572,7 +572,7 @@ const AdminAccessComplete = () => {
             </Button>
             <Button onClick={handleRevoke} className="bg-orange-600 hover:bg-orange-700">
               <Ban className="w-4 h-4 mr-2" />
-              Révoquer l'accès
+              Révoquer l&apos;accès
             </Button>
           </DialogFooter>
         </DialogContent>

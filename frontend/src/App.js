@@ -494,7 +494,8 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<LevelsPage />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/levels" element={<LevelsPage />} />
           <Route path="/exam" element={<ExamPage />} />
           <Route path="/results/:bookingId" element={<ResultsPage />} />

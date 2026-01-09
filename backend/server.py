@@ -792,6 +792,11 @@ async def check_level_unlocked(user_id: str, level_id: str):
     
     # If no content, access granted means unlocked
     if not content:
+        return {
+            "unlocked": True,
+            "access_granted": True,
+            "reason": "no_content_but_access_granted"
+        }
     
     # Check requirements
     videos_done = len(content.get('videos', [])) == 0 or len(progress.get('videos_completed', [])) >= len(content.get('videos', []))
@@ -802,12 +807,72 @@ async def check_level_unlocked(user_id: str, level_id: str):
     
     return {
         "unlocked": unlocked,
+        "access_granted": True,
+        "payment_status": progress.get('payment_status', 'pending'),
+        "volunteer_status": progress.get('volunteer_status', 'pending'),
         "videos_done": videos_done,
         "text_done": text_done,
         "live_done": live_done,
         "videos_progress": f"{len(progress.get('videos_completed', []))}/{len(content.get('videos', []))}",
         "live_required": content.get('live_required', False)
     }
+
+@api_router.post("/level-access/request")
+async def request_level_access(input: LevelAccessRequest):
+    """Request payment or volunteer access to a level"""
+    # Get or create progress
+    progress = await db.user_level_progress.find_one({
+        "user_id": input.user_id,
+        "level_id": input.level_id
+    })
+    
+    if not progress:
+        progress_obj = UserLevelProgress(
+            user_id=input.user_id,
+            level_id=input.level_id
+        )
+        progress = progress_obj.model_dump()
+        progress['updated_at'] = progress['updated_at'].isoformat()
+    
+    if input.request_type == "payment":
+        progress['payment_status'] = "pending"
+    elif input.request_type == "volunteer":
+        progress['volunteer_status'] = "pending"
+    
+    progress['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.user_level_progress.update_one(
+        {"user_id": input.user_id, "level_id": input.level_id},
+        {"$set": progress},
+        upsert=True
+    )
+    
+    return progress
+
+@api_router.post("/level-access/validate")
+async def validate_level_access(input: dict):
+    """Admin validates payment or volunteer for level access"""
+    user_id = input.get('user_id')
+    level_id = input.get('level_id')
+    validation_type = input.get('type')  # "payment" or "volunteer"
+    
+    update_data = {
+        "access_granted": True,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if validation_type == "payment":
+        update_data["payment_status"] = "validated"
+    elif validation_type == "volunteer":
+        update_data["volunteer_status"] = "validated"
+    
+    await db.user_level_progress.update_one(
+        {"user_id": user_id, "level_id": level_id},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    return {"success": True, "message": "Access validated"}
 
 # Include the router in the main app
 app.include_router(api_router)

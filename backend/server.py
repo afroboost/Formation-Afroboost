@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Response
+from fastapi import FastAPI, APIRouter, HTTPException, Response, Request
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -7,7 +7,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional
+from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone
 from io import BytesIO
@@ -17,6 +17,14 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+
+# Stripe integration
+from emergentintegrations.payments.stripe.checkout import (
+    StripeCheckout, 
+    CheckoutSessionResponse, 
+    CheckoutStatusResponse, 
+    CheckoutSessionRequest
+)
 
 # Register UTF-8 compatible fonts for French accents
 try:

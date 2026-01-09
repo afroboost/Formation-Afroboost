@@ -867,10 +867,13 @@ class AfroboostAPITester:
         print("🚀 Starting Afroboost API Tests")
         print(f"🌐 Testing against: {self.base_url}")
         
-        # PRIORITY 1: Test the main feature first - CERTIFICATE VERIFICATION
+        # PRIORITY 1: Test the specific level document PDF from the request
+        specific_level_pdf_success = self.test_specific_level_document_pdf()
+        
+        # PRIORITY 2: Test the main feature - CERTIFICATE VERIFICATION
         verification_success = self.test_certificate_verification()
         
-        # PRIORITY 2: Test the training PDF feature
+        # PRIORITY 3: Test the training PDF feature
         training_pdf_success = self.test_training_summary_pdf()
         
         try:
@@ -894,17 +897,22 @@ class AfroboostAPITester:
         print(f"📈 Success Rate: {(self.tests_passed/self.tests_run)*100:.1f}%")
         
         # CRITICAL FEATURE STATUS
-        if verification_success:
-            print("\n🎉 CRITICAL: Certificate Verification endpoint WORKING ✅")
+        if specific_level_pdf_success:
+            print("\n🎉 PRIORITY 1: Specific Level Document PDF (bf0dd6cb-7fa4-4ac6-80e7-8656971ec8d9) WORKING ✅")
         else:
-            print("\n❌ CRITICAL: Certificate Verification endpoint FAILED ❌")
+            print("\n❌ PRIORITY 1: Specific Level Document PDF FAILED ❌")
+            
+        if verification_success:
+            print("🎉 PRIORITY 2: Certificate Verification endpoint WORKING ✅")
+        else:
+            print("❌ PRIORITY 2: Certificate Verification endpoint FAILED ❌")
             
         if training_pdf_success:
-            print("🎉 CRITICAL: Training Summary PDF endpoint WORKING ✅")
+            print("🎉 PRIORITY 3: Training Summary PDF endpoint WORKING ✅")
         else:
-            print("❌ CRITICAL: Training Summary PDF endpoint FAILED ❌")
+            print("❌ PRIORITY 3: Training Summary PDF endpoint FAILED ❌")
         
-        return 0 if verification_success and training_pdf_success and self.tests_passed >= (self.tests_run * 0.8) else 1
+        return 0 if specific_level_pdf_success and verification_success and training_pdf_success and self.tests_passed >= (self.tests_run * 0.8) else 1
 
 def main():
     tester = AfroboostAPITester()

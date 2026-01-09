@@ -90,6 +90,22 @@ class CertificateCreate(BaseModel):
     certificate_type: str
     exam_booking_id: Optional[str] = None
 
+class LevelDocument(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    document_id: str = Field(default_factory=lambda: f"LEVEL-{uuid.uuid4().hex[:8].upper()}")
+    student_id: str
+    student_name: str
+    level_name: str
+    skills: List[str]
+    validated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LevelDocumentCreate(BaseModel):
+    student_id: str
+    student_name: str
+    level_name: str
+    skills: List[str]
+
 # =====================
 # EXAM DATES ENDPOINTS
 # =====================

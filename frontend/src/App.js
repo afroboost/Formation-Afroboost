@@ -309,45 +309,82 @@ const ResultsPage = () => {
   const isPassed = booking.result === 'passed';
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <Card className="card-dark border-neon max-w-2xl w-full" data-testid="result-card">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-6">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12">
+      <div className="max-w-3xl w-full">
+        <Card className="card-dark border-neon" data-testid="result-card">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-6">
+              {isPassed ? (
+                <CheckCircle className="w-24 h-24 text-green-500" data-testid="success-icon" />
+              ) : (
+                <XCircle className="w-24 h-24 text-red-500" data-testid="fail-icon" />
+              )}
+            </div>
+            <CardTitle className="text-4xl text-white mb-4" data-testid="result-title">
+              {isPassed ? 'Félicitations!' : 'Presque là.'}
+            </CardTitle>
+            <CardDescription className="text-xl text-gray-300" data-testid="result-message">
+              {isPassed
+                ? 'Vous êtes maintenant un Instructeur Certifié Afroboost.'
+                : 'Continuez à vous entraîner et réservez un nouvel examen.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
             {isPassed ? (
-              <CheckCircle className="w-24 h-24 text-green-500" data-testid="success-icon" />
+              <>
+                <Button
+                  onClick={() => navigate('/diplomas')}
+                  className="btn-neon w-full sm:w-auto"
+                  data-testid="view-certificate-button"
+                >
+                  Voir Mon Certificat
+                </Button>
+                
+                <div className="mt-8 p-6 bg-purple-500/10 rounded-lg border border-purple-500">
+                  <p className="text-white text-lg font-semibold mb-4">
+                    🎉 Partagez votre réussite!
+                  </p>
+                  <ShareButton
+                    shareText="I'm officially an Afroboost Certified Instructor 💜"
+                    shareUrl={`${window.location.origin}/verify-certificate`}
+                    buttonText="Partager ma Certification"
+                    variant="default"
+                  />
+                  <p className="text-gray-400 text-sm mt-3">
+                    Instagram • WhatsApp • Facebook
+                  </p>
+                </div>
+              </>
             ) : (
-              <XCircle className="w-24 h-24 text-red-500" data-testid="fail-icon" />
+              <Button
+                onClick={() => navigate('/exam')}
+                className="btn-neon"
+                data-testid="book-new-exam-button"
+              >
+                Réserver un Nouvel Examen
+              </Button>
             )}
-          </div>
-          <CardTitle className="text-4xl text-white mb-4" data-testid="result-title">
-            {isPassed ? 'Félicitations!' : 'Presque là.'}
-          </CardTitle>
-          <CardDescription className="text-xl text-gray-300" data-testid="result-message">
-            {isPassed
-              ? 'Vous êtes maintenant un Instructeur Certifié Afroboost.'
-              : 'Continuez à vous entraîner et réservez un nouvel examen.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center space-y-4">
-          {isPassed ? (
-            <Button
-              onClick={() => navigate('/diplomas')}
-              className="btn-neon"
-              data-testid="view-certificate-button"
-            >
-              Voir Mon Certificat
-            </Button>
-          ) : (
-            <Button
-              onClick={() => navigate('/exam')}
-              className="btn-neon"
-              data-testid="book-new-exam-button"
-            >
-              Réserver un Nouvel Examen
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {isPassed && (
+          <Card className="card-dark border-neon mt-8" data-testid="join-cta-card">
+            <CardContent className="py-8 text-center">
+              <h3 className="text-2xl font-bold text-white mb-3">
+                Rejoignez la Communauté Afroboost
+              </h3>
+              <p className="text-gray-300 mb-6">
+                Invitez vos amis à rejoindre la formation d'instructeur
+              </p>
+              <Link to="/">
+                <Button variant="outline" className="border-purple-500 text-purple-400">
+                  Join the Afroboost Instructor Training
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };

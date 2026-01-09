@@ -596,8 +596,10 @@ class AfroboostAPITester:
             self.test_exam_dates_crud()
             self.test_exam_bookings_crud()
             self.test_certificates_crud()
+            self.test_level_documents_crud()
             self.test_edge_cases()
             self.test_complete_e2e_scenario()
+            self.test_level_documents_e2e_scenario()
         finally:
             self.cleanup_resources()
         

@@ -148,6 +148,9 @@ class UserLevelProgress(BaseModel):
     text_confirmed: bool = False
     live_booked_id: Optional[str] = None
     live_attended: bool = False
+    payment_status: str = "pending"  # pending, validated, not_required
+    volunteer_status: str = "pending"  # pending, validated, rejected, not_applicable
+    access_granted: bool = False
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ProgressUpdate(BaseModel):
@@ -157,6 +160,14 @@ class ProgressUpdate(BaseModel):
     text_confirmed: Optional[bool] = None
     live_booked_id: Optional[str] = None
     live_attended: Optional[bool] = None
+    payment_status: Optional[str] = None
+    volunteer_status: Optional[str] = None
+    access_granted: Optional[bool] = None
+
+class LevelAccessRequest(BaseModel):
+    user_id: str
+    level_id: str
+    request_type: str  # "payment" or "volunteer"
 
 # =====================
 # EXAM DATES ENDPOINTS

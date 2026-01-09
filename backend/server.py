@@ -885,7 +885,7 @@ async def request_level_access(input: LevelAccessRequest):
     progress = await db.user_level_progress.find_one({
         "user_id": input.user_id,
         "level_id": input.level_id
-    })
+    }, {"_id": 0})
     
     if not progress:
         progress_obj = UserLevelProgress(
@@ -908,7 +908,13 @@ async def request_level_access(input: LevelAccessRequest):
         upsert=True
     )
     
-    return progress
+    # Fetch clean result without _id
+    result = await db.user_level_progress.find_one({
+        "user_id": input.user_id,
+        "level_id": input.level_id
+    }, {"_id": 0})
+    
+    return result
 
 @api_router.post("/level-access/validate")
 async def validate_level_access(input: dict):

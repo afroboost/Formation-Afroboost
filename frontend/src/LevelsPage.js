@@ -286,7 +286,16 @@ const LevelsPage = () => {
             {AVAILABLE_LEVELS.map((level, index) => {
               const validated = isLevelValidated(level.name);
               const levelId = `level-${index + 1}`;
-              const unlockStatus = levelUnlockStatus[levelId] || { unlocked: false };
+              const unlockStatus = levelUnlockStatus[levelId] || { 
+                unlocked: false, 
+                access_granted: false,
+                payment_status: 'pending',
+                volunteer_status: 'pending'
+              };
+              
+              const accessGranted = unlockStatus.access_granted;
+              const paymentStatus = unlockStatus.payment_status || 'pending';
+              const volunteerStatus = unlockStatus.volunteer_status || 'pending';
               
               return (
                 <Card 
@@ -318,6 +327,42 @@ const LevelsPage = () => {
                         <CheckCircle className="w-4 h-4 text-green-500" />
                         <span className="text-green-500 text-sm font-semibold">Niveau validé ✅</span>
                       </div>
+                    ) : !accessGranted ? (
+                      <div className="space-y-2">
+                        {paymentStatus === 'pending' && volunteerStatus === 'pending' ? (
+                          <>
+                            <Button
+                              onClick={() => handleRequestAccess(levelId, 'payment')}
+                              className="w-full btn-neon"
+                              data-testid={`unlock-payment-${index}`}
+                            >
+                              Débloquer ce niveau
+                            </Button>
+                            <Button
+                              onClick={() => handleRequestAccess(levelId, 'volunteer')}
+                              variant="outline"
+                              className="w-full border-purple-500 text-purple-400 btn-secondary"
+                              data-testid={`volunteer-request-${index}`}
+                            >
+                              Soumettre une demande de bénévolat
+                            </Button>
+                          </>
+                        ) : paymentStatus === 'pending' && volunteerStatus !== 'pending' ? (
+                          <div className="text-center p-3 bg-yellow-500/10 rounded-lg border border-yellow-500">
+                            <p className="text-yellow-500 text-sm font-semibold">
+                              {volunteerStatus === 'validated' ? 'Bénévolat validé ✓' : 'Demande de bénévolat en attente...'}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="text-center p-3 bg-yellow-500/10 rounded-lg border border-yellow-500">
+                            <p className="text-yellow-500 text-sm font-semibold">Paiement en attente de validation...</p>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-center gap-2 text-xs text-red-400">
+                          <Lock className="w-3 h-3" />
+                          <span>Accès verrouillé</span>
+                        </div>
+                      </div>
                     ) : unlockStatus.unlocked ? (
                       <Button
                         onClick={() => {
@@ -341,7 +386,7 @@ const LevelsPage = () => {
                         </Link>
                         <div className="flex items-center justify-center gap-2 text-xs text-yellow-500">
                           <Lock className="w-3 h-3" />
-                          <span>Formation obligatoire</span>
+                          <span>Formation en cours</span>
                         </div>
                       </div>
                     )}

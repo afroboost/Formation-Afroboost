@@ -166,6 +166,29 @@ Créer un système de certification et diplôme complet pour la marque Afroboost
 ## Test Reports
 - `/app/test_reports/iteration_1.json` - Tests initiaux
 - `/app/test_reports/iteration_2.json` - Tests Access CRUD + Paiements (27/27 ✅)
+- `/app/test_reports/iteration_3.json` - Tests Stripe Payment Integration (17/17 ✅)
+
+## Payment Integration Status
+
+### ✅ Stripe (Europe/International) - RÉEL
+- Mode: TEST (sk_test_emergent)
+- Checkout URL: checkout.stripe.com (RÉEL)
+- Transaction: Créée AVANT redirection
+- Webhook: /api/webhook/stripe
+- Accès: Créé avec status='pending' (validation admin)
+
+### 🟡 TWINT (Suisse) - Manuel temporaire
+- Provider: Payrexx (prévu)
+- Endpoint: /api/payrexx/create-payment
+- Transaction: Créée avec status='pending'
+- Action: Validation admin requise
+
+### 🟡 Mobile Money Afrique - Manuel temporaire
+- Provider: Flutterwave (prévu)
+- Endpoint: /api/flutterwave/create-payment
+- Méthodes: MTN MoMo, Orange Money, Airtel Money
+- Transaction: Créée avec status='pending'
+- Action: Validation admin requise
 
 ## Future Backlog
 1. Intégration réelle Stripe API (PaymentIntent)

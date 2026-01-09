@@ -478,37 +478,75 @@ const DiplomasPage = () => {
         </Card>
 
         {certificates.length > 0 && (
-          <div className="grid md:grid-cols-3 gap-8">
-            {certificates.map((cert) => {
-              const info = certificateInfo[cert.certificate_type] || certificateInfo.online;
-              const issuedDate = new Date(cert.issued_at);
-              
-              return (
-                <Card key={cert.id} className="card-dark border-neon hover:border-purple-400 transition-all" data-testid={`certificate-${cert.id}`}>
-                  <CardHeader>
-                    <div className="text-5xl text-center mb-4">{info.icon}</div>
-                    <CardTitle className="text-xl text-white text-center">{info.title}</CardTitle>
-                    <CardDescription className="text-gray-400 text-center">{info.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2 text-sm">
-                      <p className="text-gray-300"><span className="text-purple-400 font-semibold">Instructeur:</span> {cert.student_name}</p>
-                      <p className="text-gray-300"><span className="text-purple-400 font-semibold">ID:</span> {cert.certificate_id}</p>
-                      <p className="text-gray-300"><span className="text-purple-400 font-semibold">Date:</span> {issuedDate.toLocaleDateString('fr-FR')}</p>
-                    </div>
-                    <Button
-                      onClick={() => downloadPDF(cert.id)}
-                      className="w-full btn-neon"
-                      data-testid={`download-pdf-${cert.id}`}
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Télécharger PDF
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          <>
+            <div className="grid md:grid-cols-3 gap-8">
+              {certificates.map((cert) => {
+                const info = certificateInfo[cert.certificate_type] || certificateInfo.online;
+                const issuedDate = new Date(cert.issued_at);
+                
+                return (
+                  <Card key={cert.id} className="card-dark border-neon hover:border-purple-400 hover:shadow-2xl hover:shadow-purple-500/30 transition-all transform hover:scale-105" data-testid={`certificate-${cert.id}`}>
+                    <CardHeader>
+                      <div className="text-5xl text-center mb-4">{info.icon}</div>
+                      <CardTitle className="text-xl text-white text-center">{info.title}</CardTitle>
+                      <CardDescription className="text-gray-400 text-center">{info.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2 text-sm">
+                        <p className="text-gray-300"><span className="text-purple-400 font-semibold">Instructeur:</span> {cert.student_name}</p>
+                        <p className="text-gray-300"><span className="text-purple-400 font-semibold">ID:</span> {cert.certificate_id}</p>
+                        <p className="text-gray-300"><span className="text-purple-400 font-semibold">Date:</span> {issuedDate.toLocaleDateString('fr-FR')}</p>
+                      </div>
+                      <Button
+                        onClick={() => downloadPDF(cert.id)}
+                        className="w-full btn-neon"
+                        data-testid={`download-pdf-${cert.id}`}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Télécharger PDF
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            <Card className="card-dark border-neon mt-12" data-testid="share-certificates-card">
+              <CardContent className="py-10 text-center">
+                <h3 className="text-2xl font-bold text-white mb-4">
+                  🎉 Partagez votre Certification!
+                </h3>
+                <p className="text-gray-300 mb-6">
+                  Montrez fièrement votre statut d'instructeur certifié Afroboost
+                </p>
+                <ShareButton
+                  shareText="I'm officially an Afroboost Certified Instructor 💜"
+                  shareUrl={`${window.location.origin}/verify-certificate`}
+                  buttonText="Partager ma Certification"
+                  variant="default"
+                />
+                <p className="text-gray-400 text-xs mt-4">
+                  Instagram • WhatsApp • Facebook • LinkedIn
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="card-dark border-neon mt-8" data-testid="invite-cta-card">
+              <CardContent className="py-8 text-center">
+                <h3 className="text-xl font-bold text-white mb-3">
+                  Inspirez d'Autres à Rejoindre
+                </h3>
+                <p className="text-gray-300 mb-6">
+                  Aidez vos amis à découvrir la formation d'instructeur Afroboost
+                </p>
+                <Link to="/">
+                  <Button className="btn-neon">
+                    Join the Afroboost Instructor Training
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </>
         )}
 
         <div className="text-center mt-12 space-x-4">

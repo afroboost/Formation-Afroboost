@@ -132,7 +132,7 @@ const VerifyCertificatePage = () => {
         </Card>
 
         {verificationResult && (
-          <Card className="card-dark border-neon border-green-500 animate-in fade-in duration-500" data-testid="result-valid-card">
+          <Card className="card-dark border-neon border-green-500 animate-in success-glow" data-testid="result-valid-card">
             <CardHeader className="text-center pb-4">
               <div className="flex justify-center mb-4">
                 <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center">

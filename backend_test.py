@@ -311,6 +311,14 @@ class AfroboostAPITester:
             "certificates/non-existent-id/pdf",
             404
         )
+        
+        # Test get non-existent level document PDF
+        success, _ = self.run_test(
+            "Download Non-existent Level Document PDF",
+            "GET",
+            "level-documents/non-existent-id/pdf",
+            404
+        )
 
     def test_level_documents_crud(self):
         """Test CRUD operations for level documents"""

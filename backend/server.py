@@ -991,7 +991,8 @@ async def create_or_update_payment_config(config: LevelPaymentConfigCreate):
         doc['updated_at'] = doc['updated_at'].isoformat()
         
         await db.level_payment_config.insert_one(doc)
-        result = doc
+        # Fetch without _id to avoid serialization issues
+        result = await db.level_payment_config.find_one({"level_id": config.level_id}, {"_id": 0})
     
     return result
 

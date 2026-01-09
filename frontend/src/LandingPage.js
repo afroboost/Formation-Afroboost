@@ -159,6 +159,27 @@ const LandingPage = () => {
           </CardContent>
         </Card>
 
+        {/* Share Section */}
+        <Card className="card-dark border-neon mt-12" data-testid="share-section">
+          <CardContent className="py-10 text-center">
+            <h3 className="text-2xl font-bold text-white mb-4">
+              Partagez la Formation Afroboost
+            </h3>
+            <p className="text-gray-300 mb-6">
+              Aidez vos amis à découvrir la certification d'instructeur Afroboost
+            </p>
+            <ShareButton
+              shareText="Découvre la formation Afroboost - Deviens Instructeur Certifié de danse Afrobeat! 💜🔥"
+              shareUrl={window.location.origin}
+              buttonText="Partager sur les Réseaux Sociaux"
+              variant="default"
+            />
+            <p className="text-gray-400 text-xs mt-4">
+              Partagez sur Instagram, WhatsApp, Facebook et plus
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Quick Links */}
         <div className="text-center mt-12 space-y-4">
           <p className="text-gray-400">Prêt à commencer ?</p>

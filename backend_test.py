@@ -595,10 +595,130 @@ class AfroboostAPITester:
             except Exception as e:
                 print(f"⚠️  Error cleaning up exam date {exam_date_id}: {e}")
 
-    def test_training_summary_pdf(self):
-        """Test the public training summary PDF endpoint - MAIN FEATURE"""
+    def test_certificate_verification(self):
+        """Test the certificate verification endpoint - MAIN FEATURE FOR THIS REQUEST"""
         print("\n" + "="*60)
-        print("TESTING TRAINING SUMMARY PDF ENDPOINT (MAIN FEATURE)")
+        print("TESTING CERTIFICATE VERIFICATION ENDPOINT (MAIN FEATURE)")
+        print("="*60)
+        
+        # First, create a certificate to verify
+        cert_data = {
+            "student_id": "TEST_VERIFY_USER",
+            "student_name": "Marie Verification",
+            "certificate_type": "online"
+        }
+        
+        success, certificate = self.run_test(
+            "Create Certificate for Verification Test",
+            "POST",
+            "certificates",
+            200,
+            cert_data
+        )
+        
+        if not success or not certificate:
+            print("❌ Cannot test verification without certificate")
+            return False
+            
+        self.created_resources['certificates'].append(certificate['id'])
+        certificate_id = certificate['certificate_id']  # This is the AFRO-XXXXXXXX format
+        
+        print(f"📋 Created certificate with ID: {certificate_id}")
+        
+        # Test 1: Verify valid certificate (PUBLIC ENDPOINT - NO AUTH)
+        success, verification_result = self.run_test(
+            "Verify Valid Certificate (Public - No Auth)",
+            "GET",
+            f"certificates/verify/{certificate_id}",
+            200
+        )
+        
+        if success and verification_result:
+            # Validate response structure
+            required_fields = ['valid', 'certificate_id', 'student_name', 'certificate_type', 'issued_at', 'status']
+            missing_fields = [field for field in required_fields if field not in verification_result]
+            
+            if not missing_fields:
+                print("   ✅ All required fields present in response")
+                
+                # Validate field values
+                if verification_result['valid'] == True:
+                    print("   ✅ valid: true")
+                else:
+                    print(f"   ❌ valid should be true, got: {verification_result['valid']}")
+                    
+                if verification_result['certificate_id'] == certificate_id:
+                    print(f"   ✅ certificate_id matches: {certificate_id}")
+                else:
+                    print(f"   ❌ certificate_id mismatch: expected {certificate_id}, got {verification_result['certificate_id']}")
+                    
+                if verification_result['student_name'] == cert_data['student_name']:
+                    print(f"   ✅ student_name matches: {cert_data['student_name']}")
+                else:
+                    print(f"   ❌ student_name mismatch: expected {cert_data['student_name']}, got {verification_result['student_name']}")
+                    
+                if verification_result['certificate_type'] == cert_data['certificate_type']:
+                    print(f"   ✅ certificate_type matches: {cert_data['certificate_type']}")
+                else:
+                    print(f"   ❌ certificate_type mismatch: expected {cert_data['certificate_type']}, got {verification_result['certificate_type']}")
+                    
+                # Check date format (DD/MM/YYYY)
+                import re
+                date_pattern = r'^\d{2}/\d{2}/\d{4}$'
+                if re.match(date_pattern, verification_result['issued_at']):
+                    print(f"   ✅ issued_at format correct (DD/MM/YYYY): {verification_result['issued_at']}")
+                else:
+                    print(f"   ❌ issued_at format incorrect: {verification_result['issued_at']}")
+                    
+                if verification_result['status'] == 'VALID':
+                    print("   ✅ status: VALID")
+                else:
+                    print(f"   ❌ status should be VALID, got: {verification_result['status']}")
+                    
+            else:
+                print(f"   ❌ Missing required fields: {missing_fields}")
+                return False
+        else:
+            print("   ❌ Failed to verify valid certificate")
+            return False
+        
+        # Test 2: Verify invalid certificate ID
+        invalid_id = "AFRO-INVALID123"
+        success, error_response = self.run_test(
+            "Verify Invalid Certificate ID",
+            "GET",
+            f"certificates/verify/{invalid_id}",
+            404
+        )
+        
+        if success:
+            print(f"   ✅ Invalid certificate ID correctly returns 404")
+        else:
+            print(f"   ❌ Invalid certificate ID should return 404")
+            return False
+        
+        # Test 3: Verify another invalid certificate ID
+        invalid_id_2 = "AFRO-NOTFOUND"
+        success, error_response_2 = self.run_test(
+            "Verify Another Invalid Certificate ID",
+            "GET",
+            f"certificates/verify/{invalid_id_2}",
+            404
+        )
+        
+        if success:
+            print(f"   ✅ Another invalid certificate ID correctly returns 404")
+        else:
+            print(f"   ❌ Another invalid certificate ID should return 404")
+            return False
+        
+        print("   🎉 CERTIFICATE VERIFICATION ENDPOINT FULLY WORKING!")
+        return True
+
+    def test_training_summary_pdf(self):
+        """Test the public training summary PDF endpoint"""
+        print("\n" + "="*60)
+        print("TESTING TRAINING SUMMARY PDF ENDPOINT")
         print("="*60)
         
         success, response = self.run_test(

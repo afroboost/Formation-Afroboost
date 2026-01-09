@@ -71,60 +71,69 @@ const AdminAccessManager = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {allProgress.length === 0 ? (
+        {!Array.isArray(allProgress) || allProgress.length === 0 ? (
           <p className="text-gray-400 text-center py-8">Aucune demande en attente</p>
         ) : (
           <div className="space-y-4">
-            {allProgress.filter(p => 
-              !p.access_granted && 
-              (p.payment_status === 'pending' || p.volunteer_status === 'pending')
-            ).map((progress) => (
-              <div 
-                key={`${progress.user_id}-${progress.level_id}`}
-                className="p-4 bg-gray-800/50 rounded-lg border border-gray-700"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-white font-semibold">
-                      User: {progress.user_id} - Level: {progress.level_id}
-                    </p>
-                    <div className="mt-2 space-y-1">
-                      {progress.payment_status === 'pending' && (
-                        <p className="text-yellow-500 text-sm">💳 Paiement en attente</p>
-                      )}
-                      {progress.volunteer_status === 'pending' && (
-                        <p className="text-blue-500 text-sm">🤝 Bénévolat en attente</p>
-                      )}
+            {allProgress
+              .filter(p => 
+                p && 
+                !p.access_granted && 
+                (p.payment_status === 'pending' || p.volunteer_status === 'pending')
+              )
+              .map((progress) => {
+                if (!progress?.user_id || !progress?.level_id) return null;
+                
+                return (
+                  <div 
+                    key={`${progress.user_id}-${progress.level_id}`}
+                    className="p-4 bg-gray-800/50 rounded-lg border border-gray-700"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-semibold">
+                          User: {progress.user_id} - Level: {progress.level_id}
+                        </p>
+                        <div className="mt-2 space-y-1">
+                          {progress.payment_status === 'pending' && (
+                            <p className="text-yellow-500 text-sm">💳 Paiement en attente</p>
+                          )}
+                          {progress.volunteer_status === 'pending' && (
+                            <p className="text-blue-500 text-sm">🤝 Bénévolat en attente</p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        {progress.payment_status === 'pending' && (
+                          <Button
+                            onClick={() => handleValidateAccess(progress.user_id, progress.level_id, 'payment')}
+                            disabled={loading}
+                            className="bg-green-600 hover:bg-green-700"
+                            size="sm"
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Valider paiement
+                          </Button>
+                        )}
+                        {progress.volunteer_status === 'pending' && (
+                          <Button
+                            onClick={() => handleValidateAccess(progress.user_id, progress.level_id, 'volunteer')}
+                            disabled={loading}
+                            className="bg-blue-600 hover:bg-blue-700"
+                            size="sm"
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Valider bénévolat
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="flex gap-2">
-                    {progress.payment_status === 'pending' && (
-                      <Button
-                        onClick={() => handleValidateAccess(progress.user_id, progress.level_id, 'payment')}
-                        disabled={loading}
-                        className="bg-green-600 hover:bg-green-700"
-                        size="sm"
-                      >
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Valider paiement
-                      </Button>
-                    )}
-                    {progress.volunteer_status === 'pending' && (
-                      <Button
-                        onClick={() => handleValidateAccess(progress.user_id, progress.level_id, 'volunteer')}
-                        disabled={loading}
-                        className="bg-blue-600 hover:bg-blue-700"
-                        size="sm"
-                      >
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Valider bénévolat
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+                );
+              })
+              .filter(Boolean) // Remove null entries
+            }
           </div>
         )}
       </CardContent>

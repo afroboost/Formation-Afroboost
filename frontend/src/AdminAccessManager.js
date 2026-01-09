@@ -18,12 +18,30 @@ const AdminAccessManager = () => {
 
   const fetchAllProgress = async () => {
     try {
-      // This would need a dedicated admin endpoint in production
-      // For now we simulate by getting all progress records
       const response = await axios.get(`${API}/level-progress/admin/all`);
-      setAllProgress(response.data || []);
+      
+      // Safe normalization - handle different response shapes
+      let progressData = [];
+      
+      if (Array.isArray(response)) {
+        progressData = response;
+      } else if (Array.isArray(response?.data)) {
+        progressData = response.data;
+      } else if (response?.data && typeof response.data === 'object') {
+        // Check common wrapper keys
+        if (Array.isArray(response.data.data)) {
+          progressData = response.data.data;
+        } else if (Array.isArray(response.data.results)) {
+          progressData = response.data.results;
+        } else if (Array.isArray(response.data.progress)) {
+          progressData = response.data.progress;
+        }
+      }
+      
+      setAllProgress(progressData);
     } catch (error) {
       console.error('Error fetching progress:', error);
+      setAllProgress([]); // Fallback to empty array on error
     }
   };
 

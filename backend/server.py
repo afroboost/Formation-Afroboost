@@ -106,6 +106,58 @@ class LevelDocumentCreate(BaseModel):
     level_name: str
     skills: List[str]
 
+class Video(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    url: str
+    duration: Optional[str] = None  # Format: "10:30"
+
+class LiveSession(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    date: str
+    time: str
+    meeting_link: str
+    available_slots: int = 10
+    booked_count: int = 0
+
+class LevelContent(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    level_id: str  # e.g., "level-1"
+    level_name: str
+    videos: List[Video] = []
+    text_content: str = ""
+    live_required: bool = False
+    live_sessions: List[LiveSession] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LevelContentCreate(BaseModel):
+    level_id: str
+    level_name: str
+    videos: List[Video] = []
+    text_content: str = ""
+    live_required: bool = False
+    live_sessions: List[LiveSession] = []
+
+class UserLevelProgress(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    level_id: str
+    videos_completed: List[str] = []  # List of video IDs
+    text_confirmed: bool = False
+    live_booked_id: Optional[str] = None
+    live_attended: bool = False
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ProgressUpdate(BaseModel):
+    user_id: str
+    level_id: str
+    video_id: Optional[str] = None
+    text_confirmed: Optional[bool] = None
+    live_booked_id: Optional[str] = None
+    live_attended: Optional[bool] = None
+
 # =====================
 # EXAM DATES ENDPOINTS
 # =====================

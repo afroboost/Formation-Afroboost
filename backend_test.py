@@ -595,10 +595,83 @@ class AfroboostAPITester:
             except Exception as e:
                 print(f"⚠️  Error cleaning up exam date {exam_date_id}: {e}")
 
+    def test_training_summary_pdf(self):
+        """Test the public training summary PDF endpoint - MAIN FEATURE"""
+        print("\n" + "="*60)
+        print("TESTING TRAINING SUMMARY PDF ENDPOINT (MAIN FEATURE)")
+        print("="*60)
+        
+        success, response = self.run_test(
+            "Training Summary PDF Download (Public - No Auth)",
+            "GET",
+            "training-summary/pdf",
+            200,
+            response_type='pdf'
+        )
+        
+        if success:
+            # Additional PDF validation
+            try:
+                import requests
+                url = f"{self.api_url}/training-summary/pdf"
+                response = requests.get(url)
+                
+                # Check content type
+                content_type = response.headers.get('content-type', '')
+                if content_type == 'application/pdf':
+                    print("   ✅ Correct PDF content type")
+                else:
+                    print(f"   ❌ Wrong content type: {content_type}")
+                    return False
+                
+                # Check filename in Content-Disposition
+                content_disposition = response.headers.get('content-disposition', '')
+                if 'afroboost_training_summary.pdf' in content_disposition:
+                    print("   ✅ Correct filename: afroboost_training_summary.pdf")
+                else:
+                    print(f"   ❌ Wrong filename: {content_disposition}")
+                    return False
+                
+                # Check PDF magic bytes
+                if response.content.startswith(b'%PDF'):
+                    print("   ✅ Valid PDF magic bytes")
+                else:
+                    print("   ❌ Invalid PDF format")
+                    return False
+                    
+                # Check PDF size (should be reasonable for a comprehensive document)
+                pdf_size = len(response.content)
+                print(f"   📄 PDF size: {pdf_size} bytes")
+                if pdf_size > 5000:  # At least 5KB for comprehensive content
+                    print("   ✅ PDF has reasonable size for comprehensive content")
+                else:
+                    print("   ❌ PDF too small for comprehensive training summary")
+                    return False
+                
+                # Save PDF for manual inspection
+                try:
+                    with open('/tmp/afroboost_training_summary_test.pdf', 'wb') as f:
+                        f.write(response.content)
+                    print("   📄 PDF saved to /tmp/afroboost_training_summary_test.pdf for inspection")
+                except Exception as e:
+                    print(f"   ⚠️  Could not save PDF: {e}")
+                
+                print("   🎉 TRAINING SUMMARY PDF ENDPOINT FULLY WORKING!")
+                return True
+                
+            except Exception as e:
+                print(f"   ❌ Error validating PDF: {e}")
+                return False
+        
+        return success
+
     def run_all_tests(self):
         """Run all test suites"""
         print("🚀 Starting Afroboost API Tests")
         print(f"🌐 Testing against: {self.base_url}")
+        
+        # PRIORITY 1: Test the main feature first
+        training_pdf_success = self.test_training_summary_pdf()
         
         try:
             self.test_exam_dates_crud()

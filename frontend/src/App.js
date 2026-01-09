@@ -15,6 +15,7 @@ import LandingPage from '@/LandingPage';
 import VerifyCertificatePage from '@/VerifyCertificatePage';
 import ShareButton from '@/components/ShareButton';
 import LevelTrainingPage from '@/LevelTrainingPage';
+import AdminLoginPage from '@/AdminLoginPage';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

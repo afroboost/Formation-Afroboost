@@ -68,6 +68,7 @@ const LevelsPage = () => {
   const [showValidationForm, setShowValidationForm] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [levelUnlockStatus, setLevelUnlockStatus] = useState({});
+  const [paymentConfigs, setPaymentConfigs] = useState({});
 
   useEffect(() => {
     // Load from localStorage
@@ -79,7 +80,25 @@ const LevelsPage = () => {
       fetchMyDocuments(storedId);
       checkAllLevelsUnlock(storedId);
     }
+    
+    // Load payment configs
+    fetchPaymentConfigs();
   }, []);
+
+  const fetchPaymentConfigs = async () => {
+    try {
+      const response = await axios.get(`${API}/level-payment-config`);
+      const configs = {};
+      if (Array.isArray(response.data)) {
+        response.data.forEach(config => {
+          configs[config.level_id] = config;
+        });
+      }
+      setPaymentConfigs(configs);
+    } catch (error) {
+      console.error('Error fetching payment configs:', error);
+    }
+  };
 
   const checkAllLevelsUnlock = async (uid) => {
     const statuses = {};

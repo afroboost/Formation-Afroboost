@@ -33,18 +33,6 @@ const AdminPanel = () => {
     available_slots: 10
   });
 
-  useEffect(() => {
-    // Check admin session
-    const adminSession = localStorage.getItem('afroboost_admin_session');
-    if (!adminSession) {
-      navigate('/admin-login');
-      return;
-    }
-    
-    fetchExamDates();
-    fetchBookings();
-  }, [navigate]);
-
   const fetchExamDates = async () => {
     try {
       const response = await axios.get(`${API}/exam-dates`);
@@ -62,6 +50,18 @@ const AdminPanel = () => {
       console.error('Error fetching bookings:', error);
     }
   };
+
+  useEffect(() => {
+    // Check admin session
+    const adminSession = localStorage.getItem('afroboost_admin_session');
+    if (!adminSession) {
+      navigate('/admin-login');
+      return;
+    }
+    
+    fetchExamDates();
+    fetchBookings();
+  }, [navigate]);
 
   const handleCreateDate = async () => {
     if (!newDate.date || !newDate.time) {

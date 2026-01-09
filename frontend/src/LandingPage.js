@@ -11,7 +11,10 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const LandingPage = () => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const downloadTrainingSummary = async () => {
+    setIsDownloading(true);
     try {
       const response = await axios.get(`${API}/training-summary/pdf`, {
         responseType: 'blob'
@@ -27,6 +30,8 @@ const LandingPage = () => {
     } catch (error) {
       console.error('Error downloading training summary:', error);
       toast.error('Erreur lors du téléchargement');
+    } finally {
+      setIsDownloading(false);
     }
   };
 

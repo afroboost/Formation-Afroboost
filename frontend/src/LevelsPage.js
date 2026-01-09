@@ -111,6 +111,31 @@ const LevelsPage = () => {
     }
   };
 
+  const handleRequestAccess = async (levelId, requestType) => {
+    if (!studentId) {
+      toast.error('Veuillez entrer votre ID étudiant');
+      return;
+    }
+
+    try {
+      await axios.post(`${API}/level-access/request`, {
+        user_id: studentId,
+        level_id: levelId,
+        request_type: requestType
+      });
+      
+      if (requestType === 'payment') {
+        toast.success('Demande de paiement soumise');
+      } else {
+        toast.success('Demande de bénévolat soumise');
+      }
+      
+      checkAllLevelsUnlock(studentId);
+    } catch (error) {
+      toast.error('Erreur lors de la soumission');
+    }
+  };
+
   const handleValidateLevel = async (level, levelId) => {
     if (!studentId || !studentName) {
       toast.error('Veuillez entrer votre ID et nom');

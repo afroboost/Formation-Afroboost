@@ -239,6 +239,11 @@ const ExamPage = () => {
               Voir Mes Diplômes
             </Button>
           </Link>
+          <Link to="/levels" className="ml-4">
+            <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="view-levels-link">
+              Voir Mes Niveaux
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

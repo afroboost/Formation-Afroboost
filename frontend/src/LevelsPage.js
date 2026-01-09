@@ -130,35 +130,95 @@ const LevelsPage = () => {
     }
   };
 
-  const handleRequestAccess = async (levelId, requestType) => {
+  const handleStripePayment = async (levelId) => {
     if (!studentId) {
       toast.error('Veuillez entrer votre ID étudiant');
       return;
     }
 
     try {
-      const payload = {
+      toast.loading('Redirection vers le paiement...');
+      
+      const response = await axios.post(`${API}/stripe/create-checkout`, {
+        user_id: studentId,
+        level_id: levelId,
+        origin_url: window.location.origin
+      });
+      
+      // Redirect to Stripe Checkout
+      if (response.data.checkout_url) {
+        window.location.href = response.data.checkout_url;
+      } else {
+        toast.dismiss();
+        toast.error('Erreur: URL de paiement non reçue');
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error('Stripe payment error:', error);
+      const errorMsg = error.response?.data?.detail || 'Erreur lors de la création du paiement';
+      toast.error(errorMsg);
+    }
+  };
+
+  const handleRequestAccess = async (levelId, requestType, paymentMethod) => {
+    if (!studentId) {
+      toast.error('Veuillez entrer votre ID étudiant');
+      return;
+    }
+
+    // If Stripe payment, use real checkout
+    if (requestType === 'payment' && paymentMethod === 'stripe') {
+      return handleStripePayment(levelId);
+    }
+
+    // For volunteer or other payment methods (TWINT, Mobile Money) - create pending transaction
+    try {
+      let endpoint = `${API}/level-access/request`;
+      let payload = {
         user_id: studentId,
         level_id: levelId,
         request_type: requestType
       };
+
+      // For non-Stripe payments, use specific endpoints
+      if (requestType === 'payment') {
+        if (paymentMethod === 'twint_api' || paymentMethod === 'twint_link') {
+          endpoint = `${API}/payrexx/create-payment`;
+          payload = {
+            user_id: studentId,
+            level_id: levelId,
+            payment_method: paymentMethod
+          };
+        } else if (paymentMethod?.startsWith('mobile_money')) {
+          endpoint = `${API}/flutterwave/create-payment`;
+          payload = {
+            user_id: studentId,
+            level_id: levelId,
+            payment_method: paymentMethod
+          };
+        }
+      }
       
-      console.log('Submitting access request:', payload);
+      console.log('Submitting request:', endpoint, payload);
       
-      const response = await axios.post(`${API}/level-access/request`, payload);
+      const response = await axios.post(endpoint, payload);
       
-      console.log('Access request response:', response.data);
+      console.log('Response:', response.data);
       
       if (requestType === 'payment') {
-        toast.success('Demande de paiement soumise');
+        if (response.data.action === 'manual_validation_required') {
+          toast.success('Transaction créée! En attente de validation admin.');
+        } else {
+          toast.success('Demande de paiement soumise');
+        }
       } else {
-        toast.success('Demande de bénévolat soumise');
+        toast.success('Demande de bénévolat soumise! En attente de validation.');
       }
       
       checkAllLevelsUnlock(studentId);
     } catch (error) {
       console.error('Access request error:', error);
-      const errorMsg = error.response?.data?.detail || 'Une erreur est survenue. Veuillez vérifier les informations saisies.';
+      const errorMsg = error.response?.data?.detail || 'Une erreur est survenue.';
       toast.error(errorMsg);
     }
   };

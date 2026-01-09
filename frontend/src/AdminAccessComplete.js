@@ -418,7 +418,7 @@ const AdminAccessComplete = () => {
               </Select>
             </div>
             <div>
-              <Label className="text-gray-300">Type d'accès</Label>
+              <Label className="text-gray-300">Type d&apos;accès</Label>
               <Select 
                 value={formData.access_type} 
                 onValueChange={(v) => setFormData({...formData, access_type: v})}

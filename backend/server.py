@@ -758,6 +758,12 @@ async def get_user_all_progress(user_id: str):
     progress_list = await db.user_level_progress.find({"user_id": user_id}, {"_id": 0}).to_list(1000)
     return progress_list
 
+@api_router.get("/level-progress/admin/all")
+async def get_all_progress_admin():
+    """Admin endpoint to get all progress records"""
+    progress_list = await db.user_level_progress.find({}, {"_id": 0}).to_list(1000)
+    return progress_list
+
 @api_router.get("/level-progress/check-unlock/{user_id}/{level_id}")
 async def check_level_unlocked(user_id: str, level_id: str):
     # Get level content

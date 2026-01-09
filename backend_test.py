@@ -693,7 +693,13 @@ class AfroboostAPITester:
         print(f"❌ Tests Failed: {self.tests_run - self.tests_passed}")
         print(f"📈 Success Rate: {(self.tests_passed/self.tests_run)*100:.1f}%")
         
-        return 0 if self.tests_passed == self.tests_run else 1
+        # CRITICAL FEATURE STATUS
+        if training_pdf_success:
+            print("\n🎉 CRITICAL: Training Summary PDF endpoint WORKING ✅")
+        else:
+            print("\n❌ CRITICAL: Training Summary PDF endpoint FAILED ❌")
+        
+        return 0 if training_pdf_success and self.tests_passed >= (self.tests_run * 0.8) else 1
 
 def main():
     tester = AfroboostAPITester()

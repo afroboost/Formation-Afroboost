@@ -242,17 +242,17 @@ const VerifyCertificatePage = () => {
           <p className="text-gray-400">Vous cherchez autre chose ?</p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link to="/">
-              <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="go-home-link">
+              <Button variant="outline" className="border-purple-500 text-purple-400 btn-secondary" data-testid="go-home-link">
                 Accueil
               </Button>
             </Link>
             <Link to="/levels">
-              <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="go-levels-link">
+              <Button variant="outline" className="border-purple-500 text-purple-400 btn-secondary" data-testid="go-levels-link">
                 Parcours de Formation
               </Button>
             </Link>
             <Link to="/exam">
-              <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="go-exam-link">
+              <Button variant="outline" className="border-purple-500 text-purple-400 btn-secondary" data-testid="go-exam-link">
                 Passer l'Examen
               </Button>
             </Link>

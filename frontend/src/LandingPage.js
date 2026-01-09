@@ -177,6 +177,11 @@ const LandingPage = () => {
                 Voir les Diplômes
               </Button>
             </Link>
+            <Link to="/verify-certificate">
+              <Button variant="outline" className="border-purple-500 text-purple-400" data-testid="verify-certificate-button">
+                Vérifier un Certificat
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

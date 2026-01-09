@@ -367,33 +367,70 @@ const LevelsPage = () => {
                       </div>
                     ) : !accessGranted ? (
                       <div className="space-y-2">
-                        {paymentStatus === 'pending' && volunteerStatus === 'pending' ? (
+                        {/* Check if level is configured by admin */}
+                        {paymentConfig.price || paymentConfig.volunteer_description || paymentConfig.enabled_payment_methods?.length > 0 ? (
                           <>
-                            <Button
-                              onClick={() => handleRequestAccess(levelId, 'payment')}
-                              className="w-full btn-neon"
-                              data-testid={`unlock-payment-${index}`}
-                            >
-                              Débloquer ce niveau
-                            </Button>
-                            <Button
-                              onClick={() => handleRequestAccess(levelId, 'volunteer')}
-                              variant="outline"
-                              className="w-full border-purple-500 text-purple-400 btn-secondary"
-                              data-testid={`volunteer-request-${index}`}
-                            >
-                              Soumettre une demande de bénévolat
-                            </Button>
+                            {/* Payment request pending */}
+                            {paymentStatus !== 'pending' && paymentStatus !== 'validated' ? null : paymentStatus === 'validated' ? (
+                              <div className="text-center p-3 bg-green-500/10 rounded-lg border border-green-500">
+                                <p className="text-green-500 text-sm font-semibold">Paiement validé ✓</p>
+                              </div>
+                            ) : showMoneyOption && paymentStatus === 'pending' && volunteerStatus !== 'validated' ? (
+                              <div className="space-y-2">
+                                <Button
+                                  onClick={() => handleRequestAccess(levelId, 'payment')}
+                                  className="w-full btn-neon"
+                                  data-testid={`unlock-payment-${index}`}
+                                >
+                                  Payer ce niveau
+                                  {paymentConfig.price && ` (${paymentConfig.price} ${paymentConfig.currency || 'CHF'})`}
+                                </Button>
+                                {paymentConfig.enabled_payment_methods?.length > 0 && (
+                                  <p className="text-xs text-gray-400 text-center">
+                                    Méthodes: {paymentConfig.enabled_payment_methods.join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                            ) : null}
+
+                            {/* Show pending payment status */}
+                            {paymentStatus !== 'pending' && paymentStatus !== 'validated' && (
+                              <div className="text-center p-3 bg-yellow-500/10 rounded-lg border border-yellow-500">
+                                <p className="text-yellow-500 text-sm font-semibold">Paiement en attente de validation...</p>
+                              </div>
+                            )}
+
+                            {/* Volunteer request */}
+                            {volunteerStatus === 'validated' ? (
+                              <div className="text-center p-3 bg-green-500/10 rounded-lg border border-green-500">
+                                <p className="text-green-500 text-sm font-semibold">Bénévolat validé ✓</p>
+                              </div>
+                            ) : showVolunteerOption && volunteerStatus === 'pending' && paymentStatus !== 'validated' ? (
+                              <div className="space-y-2">
+                                <Button
+                                  onClick={() => handleRequestAccess(levelId, 'volunteer')}
+                                  variant="outline"
+                                  className="w-full border-purple-500 text-purple-400 btn-secondary"
+                                  data-testid={`volunteer-request-${index}`}
+                                >
+                                  Soumettre une demande de bénévolat
+                                </Button>
+                                {paymentConfig.volunteer_description && (
+                                  <p className="text-xs text-gray-400 text-center">
+                                    {paymentConfig.volunteer_description}
+                                  </p>
+                                )}
+                              </div>
+                            ) : volunteerStatus !== 'pending' && volunteerStatus !== 'validated' ? (
+                              <div className="text-center p-3 bg-yellow-500/10 rounded-lg border border-yellow-500">
+                                <p className="text-yellow-500 text-sm font-semibold">Demande de bénévolat en attente...</p>
+                              </div>
+                            ) : null}
                           </>
-                        ) : paymentStatus === 'pending' && volunteerStatus !== 'pending' ? (
-                          <div className="text-center p-3 bg-yellow-500/10 rounded-lg border border-yellow-500">
-                            <p className="text-yellow-500 text-sm font-semibold">
-                              {volunteerStatus === 'validated' ? 'Bénévolat validé ✓' : 'Demande de bénévolat en attente...'}
-                            </p>
-                          </div>
                         ) : (
-                          <div className="text-center p-3 bg-yellow-500/10 rounded-lg border border-yellow-500">
-                            <p className="text-yellow-500 text-sm font-semibold">Paiement en attente de validation...</p>
+                          /* Level not configured by admin - show nothing actionable */
+                          <div className="text-center p-3 bg-gray-700/30 rounded-lg border border-gray-600">
+                            <p className="text-gray-400 text-sm">Niveau non disponible actuellement</p>
                           </div>
                         )}
                         <div className="flex items-center justify-center gap-2 text-xs text-red-400">

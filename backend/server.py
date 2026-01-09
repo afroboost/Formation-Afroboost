@@ -1451,6 +1451,428 @@ async def complete_payment_manual(transaction_id: str):
     return await payment_webhook(webhook_data)
 
 # =====================
+# STRIPE REAL PAYMENT ENDPOINTS
+# =====================
+
+# Stripe API key from environment
+STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
+
+class StripeCheckoutRequest(BaseModel):
+    """Request to create a Stripe checkout session"""
+    user_id: str
+    level_id: str
+    origin_url: str  # Frontend origin for success/cancel URLs
+
+class StripeCheckoutResponse(BaseModel):
+    """Response with Stripe checkout URL"""
+    checkout_url: str
+    session_id: str
+    transaction_id: str
+
+@api_router.post("/stripe/create-checkout")
+async def create_stripe_checkout(request: Request, input: StripeCheckoutRequest):
+    """Create a Stripe Checkout Session for level payment"""
+    
+    if not STRIPE_API_KEY:
+        raise HTTPException(status_code=500, detail="Stripe API key not configured")
+    
+    # Get level payment config to get the price
+    config = await db.level_payment_config.find_one({"level_id": input.level_id}, {"_id": 0})
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration de paiement non trouvée pour ce niveau")
+    
+    if "stripe" not in config.get("enabled_payment_methods", []):
+        raise HTTPException(status_code=400, detail="Stripe n'est pas activé pour ce niveau")
+    
+    price = config.get("price", 0)
+    currency = config.get("currency", "CHF").lower()
+    
+    if price <= 0:
+        raise HTTPException(status_code=400, detail="Prix invalide pour ce niveau")
+    
+    # Create internal transaction FIRST (before redirect to Stripe)
+    transaction_id = str(uuid.uuid4())
+    external_ref = f"AFRO-STRIPE-{uuid.uuid4().hex[:8].upper()}"
+    
+    transaction = {
+        "id": transaction_id,
+        "user_id": input.user_id,
+        "level_id": input.level_id,
+        "amount": float(price),
+        "currency": currency.upper(),
+        "payment_method": "stripe",
+        "status": "pending",
+        "external_reference": external_ref,
+        "provider_transaction_id": None,
+        "stripe_session_id": None,
+        "webhook_received": False,
+        "access_id": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "completed_at": None,
+        "metadata": {
+            "level_name": config.get("level_name", input.level_id)
+        }
+    }
+    
+    await db.payment_transactions.insert_one(transaction)
+    
+    # Build success/cancel URLs
+    success_url = f"{input.origin_url}/payment-success?session_id={{CHECKOUT_SESSION_ID}}&transaction_id={transaction_id}"
+    cancel_url = f"{input.origin_url}/levels?payment_cancelled=true"
+    
+    # Initialize Stripe checkout
+    host_url = str(request.base_url).rstrip('/')
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    
+    # Create checkout session
+    checkout_request = CheckoutSessionRequest(
+        amount=float(price),
+        currency=currency,
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata={
+            "transaction_id": transaction_id,
+            "user_id": input.user_id,
+            "level_id": input.level_id,
+            "external_ref": external_ref
+        }
+    )
+    
+    try:
+        session: CheckoutSessionResponse = await stripe_checkout.create_checkout_session(checkout_request)
+        
+        # Update transaction with Stripe session ID
+        await db.payment_transactions.update_one(
+            {"id": transaction_id},
+            {"$set": {
+                "stripe_session_id": session.session_id,
+                "provider_transaction_id": session.session_id
+            }}
+        )
+        
+        logger.info(f"Stripe checkout created: session={session.session_id}, transaction={transaction_id}")
+        
+        return {
+            "checkout_url": session.url,
+            "session_id": session.session_id,
+            "transaction_id": transaction_id
+        }
+        
+    except Exception as e:
+        logger.error(f"Stripe checkout creation failed: {e}")
+        # Mark transaction as failed
+        await db.payment_transactions.update_one(
+            {"id": transaction_id},
+            {"$set": {"status": "failed", "metadata.error": str(e)}}
+        )
+        raise HTTPException(status_code=500, detail=f"Erreur Stripe: {str(e)}")
+
+
+@api_router.get("/stripe/checkout-status/{session_id}")
+async def get_stripe_checkout_status(request: Request, session_id: str):
+    """Get the status of a Stripe checkout session and update transaction"""
+    
+    if not STRIPE_API_KEY:
+        raise HTTPException(status_code=500, detail="Stripe API key not configured")
+    
+    # Find transaction by session ID
+    transaction = await db.payment_transactions.find_one(
+        {"stripe_session_id": session_id},
+        {"_id": 0}
+    )
+    
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found for this session")
+    
+    # If already completed, return current status
+    if transaction.get("status") == "completed":
+        return {
+            "status": "completed",
+            "payment_status": "paid",
+            "transaction_id": transaction["id"],
+            "access_status": "pending_admin_validation"
+        }
+    
+    # Poll Stripe for status
+    host_url = str(request.base_url).rstrip('/')
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    
+    try:
+        status: CheckoutStatusResponse = await stripe_checkout.get_checkout_status(session_id)
+        
+        logger.info(f"Stripe status for {session_id}: {status.payment_status}")
+        
+        if status.payment_status == "paid":
+            # Payment successful - update transaction and create access
+            await process_successful_stripe_payment(transaction)
+            
+            return {
+                "status": "completed",
+                "payment_status": "paid",
+                "transaction_id": transaction["id"],
+                "access_status": "pending_admin_validation"
+            }
+        
+        elif status.status == "expired":
+            await db.payment_transactions.update_one(
+                {"id": transaction["id"]},
+                {"$set": {"status": "failed", "metadata.reason": "Session expired"}}
+            )
+            return {
+                "status": "expired",
+                "payment_status": "unpaid",
+                "transaction_id": transaction["id"]
+            }
+        
+        else:
+            return {
+                "status": status.status,
+                "payment_status": status.payment_status,
+                "transaction_id": transaction["id"]
+            }
+            
+    except Exception as e:
+        logger.error(f"Error checking Stripe status: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur vérification Stripe: {str(e)}")
+
+
+async def process_successful_stripe_payment(transaction: dict):
+    """Process a successful Stripe payment - create transaction and access"""
+    
+    now = datetime.now(timezone.utc)
+    
+    # Check if already processed (prevent duplicate processing)
+    current = await db.payment_transactions.find_one({"id": transaction["id"]})
+    if current and current.get("status") == "completed":
+        logger.info(f"Transaction {transaction['id']} already processed, skipping")
+        return
+    
+    # Update transaction to completed
+    await db.payment_transactions.update_one(
+        {"id": transaction["id"]},
+        {"$set": {
+            "status": "completed",
+            "completed_at": now.isoformat(),
+            "webhook_received": True
+        }}
+    )
+    
+    # Create UserAccess with status "pending" (requires admin validation per user requirement)
+    access_id = str(uuid.uuid4())
+    access = {
+        "id": access_id,
+        "user_id": transaction["user_id"],
+        "level_id": transaction["level_id"],
+        "status": "pending",  # IMPORTANT: Requires admin validation
+        "access_type": "payment",
+        "granted_at": None,  # Will be set when admin validates
+        "expires_at": None,
+        "revoked_at": None,
+        "revoked_by": None,
+        "revoke_reason": None,
+        "payment_id": transaction["id"],
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat()
+    }
+    
+    await db.user_access.insert_one(access)
+    
+    # Link access to transaction
+    await db.payment_transactions.update_one(
+        {"id": transaction["id"]},
+        {"$set": {"access_id": access_id}}
+    )
+    
+    # Update user_level_progress for backward compatibility
+    # Note: access_granted is FALSE because admin must validate
+    await db.user_level_progress.update_one(
+        {"user_id": transaction["user_id"], "level_id": transaction["level_id"]},
+        {"$set": {
+            "payment_status": "validated",
+            "access_granted": False,  # Admin must validate
+            "access_status": "pending_admin_validation",
+            "updated_at": now.isoformat()
+        }},
+        upsert=True
+    )
+    
+    logger.info(f"Stripe payment processed: transaction={transaction['id']}, access={access_id} (pending admin)")
+
+
+@api_router.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhook events"""
+    
+    if not STRIPE_API_KEY:
+        raise HTTPException(status_code=500, detail="Stripe API key not configured")
+    
+    # Get raw body for signature verification
+    body = await request.body()
+    signature = request.headers.get("Stripe-Signature", "")
+    
+    host_url = str(request.base_url).rstrip('/')
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    
+    try:
+        webhook_response = await stripe_checkout.handle_webhook(body, signature)
+        
+        logger.info(f"Stripe webhook received: event={webhook_response.event_type}, session={webhook_response.session_id}")
+        
+        if webhook_response.event_type == "checkout.session.completed":
+            # Find transaction by session ID
+            transaction = await db.payment_transactions.find_one(
+                {"stripe_session_id": webhook_response.session_id}
+            )
+            
+            if transaction and transaction.get("status") != "completed":
+                if webhook_response.payment_status == "paid":
+                    await process_successful_stripe_payment(transaction)
+                    logger.info(f"Webhook processed payment for session {webhook_response.session_id}")
+        
+        return {"received": True, "event": webhook_response.event_type}
+        
+    except Exception as e:
+        logger.error(f"Stripe webhook error: {e}")
+        # Return 200 to acknowledge receipt even on error (Stripe will retry)
+        return {"received": True, "error": str(e)}
+
+
+# =====================
+# PAYREXX (TWINT) ENDPOINTS - STRUCTURE READY
+# =====================
+
+@api_router.post("/payrexx/create-payment")
+async def create_payrexx_payment(input: PaymentInitiate):
+    """Create a Payrexx payment for TWINT (Switzerland)
+    
+    NOTE: This is a structured placeholder. Real integration requires:
+    - Payrexx API key
+    - Payrexx instance name
+    """
+    
+    # Get level payment config
+    config = await db.level_payment_config.find_one({"level_id": input.level_id}, {"_id": 0})
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration non trouvée")
+    
+    if "twint_api" not in config.get("enabled_payment_methods", []):
+        raise HTTPException(status_code=400, detail="TWINT n'est pas activé pour ce niveau")
+    
+    price = config.get("price", 0)
+    currency = config.get("currency", "CHF")
+    
+    # Create transaction record (manual mode until Payrexx key provided)
+    transaction_id = str(uuid.uuid4())
+    external_ref = f"AFRO-TWINT-{uuid.uuid4().hex[:8].upper()}"
+    
+    transaction = {
+        "id": transaction_id,
+        "user_id": input.user_id,
+        "level_id": input.level_id,
+        "amount": float(price),
+        "currency": currency,
+        "payment_method": "twint_api",
+        "status": "pending",
+        "external_reference": external_ref,
+        "provider_transaction_id": None,
+        "webhook_received": False,
+        "access_id": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "completed_at": None,
+        "metadata": {
+            "provider": "payrexx",
+            "requires_manual_validation": True,
+            "instructions": config.get("payment_instructions", {}).get("twint", "")
+        }
+    }
+    
+    await db.payment_transactions.insert_one(transaction)
+    
+    return {
+        "transaction_id": transaction_id,
+        "external_reference": external_ref,
+        "amount": price,
+        "currency": currency,
+        "payment_method": "twint_api",
+        "status": "pending",
+        "action": "manual_validation_required",
+        "message": "TWINT Payrexx - En attente d'intégration API. Validation admin requise.",
+        "instructions": config.get("payment_instructions", {}).get("twint", "")
+    }
+
+
+# =====================
+# FLUTTERWAVE (MOBILE MONEY AFRICA) ENDPOINTS - STRUCTURE READY
+# =====================
+
+@api_router.post("/flutterwave/create-payment")
+async def create_flutterwave_payment(input: PaymentInitiate):
+    """Create a Flutterwave payment for Mobile Money (Africa)
+    
+    NOTE: This is a structured placeholder. Real integration requires:
+    - Flutterwave public key
+    - Flutterwave secret key
+    """
+    
+    # Get level payment config
+    config = await db.level_payment_config.find_one({"level_id": input.level_id}, {"_id": 0})
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration non trouvée")
+    
+    # Check if any mobile money method is enabled
+    mobile_methods = ["mobile_money_mtn", "mobile_money_orange", "mobile_money_airtel"]
+    enabled_methods = config.get("enabled_payment_methods", [])
+    
+    if not any(m in enabled_methods for m in mobile_methods):
+        raise HTTPException(status_code=400, detail="Mobile Money n'est pas activé pour ce niveau")
+    
+    price = config.get("price", 0)
+    currency = input.currency or config.get("currency", "XAF")
+    
+    # Create transaction record (manual mode until Flutterwave key provided)
+    transaction_id = str(uuid.uuid4())
+    external_ref = f"AFRO-FLW-{uuid.uuid4().hex[:8].upper()}"
+    
+    transaction = {
+        "id": transaction_id,
+        "user_id": input.user_id,
+        "level_id": input.level_id,
+        "amount": float(price),
+        "currency": currency,
+        "payment_method": input.payment_method,
+        "status": "pending",
+        "external_reference": external_ref,
+        "provider_transaction_id": None,
+        "webhook_received": False,
+        "access_id": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "completed_at": None,
+        "metadata": {
+            "provider": "flutterwave",
+            "requires_manual_validation": True,
+            "phone_number": input.return_url  # Can be used for phone number in mobile money
+        }
+    }
+    
+    await db.payment_transactions.insert_one(transaction)
+    
+    return {
+        "transaction_id": transaction_id,
+        "external_reference": external_ref,
+        "amount": price,
+        "currency": currency,
+        "payment_method": input.payment_method,
+        "status": "pending",
+        "action": "manual_validation_required",
+        "message": "Flutterwave Mobile Money - En attente d'intégration API. Validation admin requise."
+    }
+
+
+# =====================
 # LEVEL PAYMENT CONFIG ENDPOINTS
 # =====================
 

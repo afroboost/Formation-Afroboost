@@ -340,6 +340,123 @@ async def download_certificate_pdf(certificate_id: str):
         }
     )
 
+# =====================
+# LEVEL DOCUMENTS ENDPOINTS
+# =====================
+
+@api_router.post("/level-documents", response_model=LevelDocument)
+async def create_level_document(input: LevelDocumentCreate):
+    doc_obj = LevelDocument(**input.model_dump())
+    
+    doc = doc_obj.model_dump()
+    doc['validated_at'] = doc['validated_at'].isoformat()
+    
+    await db.level_documents.insert_one(doc)
+    return doc_obj
+
+@api_router.get("/level-documents/student/{student_id}", response_model=List[LevelDocument])
+async def get_student_level_documents(student_id: str):
+    documents = await db.level_documents.find({"student_id": student_id}, {"_id": 0}).to_list(1000)
+    
+    for doc in documents:
+        if isinstance(doc['validated_at'], str):
+            doc['validated_at'] = datetime.fromisoformat(doc['validated_at'])
+    
+    return documents
+
+@api_router.get("/level-documents/{document_id}/pdf")
+async def download_level_document_pdf(document_id: str):
+    doc = await db.level_documents.find_one({"id": document_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Level document not found")
+    
+    # Generate PDF
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    # Background - Deep Black
+    c.setFillColor(colors.HexColor('#0a0a0a'))
+    c.rect(0, 0, width, height, fill=True, stroke=False)
+    
+    # Neon Purple border
+    c.setStrokeColor(colors.HexColor('#a855f7'))
+    c.setLineWidth(3)
+    c.rect(2*cm, 2*cm, width - 4*cm, height - 4*cm, fill=False, stroke=True)
+    
+    # Inner border glow effect
+    c.setStrokeColor(colors.HexColor('#c084fc'))
+    c.setLineWidth(1)
+    c.rect(2.2*cm, 2.2*cm, width - 4.4*cm, height - 4.4*cm, fill=False, stroke=True)
+    
+    # Title - AFROBOOST in neon purple
+    c.setFillColor(colors.HexColor('#a855f7'))
+    c.setFont("Helvetica-Bold", 48)
+    c.drawCentredString(width/2, height - 5*cm, "AFROBOOST")
+    
+    # Document type
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 28)
+    c.drawCentredString(width/2, height - 7*cm, "DOCUMENT DE VALIDATION DE NIVEAU")
+    
+    # Level name
+    c.setFillColor(colors.HexColor('#c084fc'))
+    c.setFont("Helvetica-Bold", 22)
+    c.drawCentredString(width/2, height - 9.5*cm, doc['level_name'].upper())
+    
+    # Student name
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 32)
+    c.drawCentredString(width/2, height - 12*cm, doc['student_name'].upper())
+    
+    # Statement
+    c.setFillColor(colors.HexColor('#e5e5e5'))
+    c.setFont("Helvetica", 14)
+    c.drawCentredString(width/2, height - 14*cm, "Ce document certifie que le niveau ci-dessus a été")
+    c.drawCentredString(width/2, height - 14.7*cm, "validé avec succès.")
+    
+    # Skills validated title
+    c.setFillColor(colors.HexColor('#a855f7'))
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(4*cm, height - 17*cm, "COMPÉTENCES VALIDÉES:")
+    
+    # Skills list
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica", 12)
+    y_position = height - 18.5*cm
+    for skill in doc['skills']:
+        c.drawString(4.5*cm, y_position, f"• {skill}")
+        y_position -= 0.6*cm
+        if y_position < 8*cm:  # Prevent overflow
+            break
+    
+    # Document details
+    c.setFillColor(colors.HexColor('#a855f7'))
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(4*cm, 6*cm, f"ID DOCUMENT: {doc['document_id']}")
+    c.drawString(4*cm, 5.3*cm, f"ID ÉTUDIANT: {doc['student_id']}")
+    
+    validated_date = doc['validated_at']
+    if isinstance(validated_date, str):
+        validated_date = datetime.fromisoformat(validated_date)
+    c.drawString(4*cm, 4.6*cm, f"DATE DE VALIDATION: {validated_date.strftime('%d/%m/%Y')}")
+    
+    # Footer
+    c.setFillColor(colors.HexColor('#71717a'))
+    c.setFont("Helvetica-Oblique", 10)
+    c.drawCentredString(width/2, 3*cm, "Formation Officielle Afroboost – Imprimable & Vérifiable")
+    
+    c.save()
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=afroboost_level_{doc['document_id']}.pdf"
+        }
+    )
+
 # Include the router in the main app
 app.include_router(api_router)
 

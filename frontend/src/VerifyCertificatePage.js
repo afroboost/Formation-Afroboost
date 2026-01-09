@@ -114,8 +114,17 @@ const VerifyCertificatePage = () => {
                   disabled={isLoading}
                   data-testid="verify-button"
                 >
-                  <Search className="w-5 h-5 mr-2" />
-                  {isLoading ? 'Vérification...' : 'Vérifier'}
+                  {isLoading ? (
+                    <>
+                      <span className="spinner"></span>
+                      Vérification...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-5 h-5 mr-2" />
+                      Vérifier
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

@@ -23,10 +23,10 @@ try:
     # Use DejaVuSans which has excellent UTF-8 support
     pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
     pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
-    pdfmetrics.registerFont(TTFont('DejaVuSans-Oblique', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf'))
+    # DejaVuSans-Oblique doesn't exist, use regular DejaVuSans for oblique text
     UTF8_FONT = 'DejaVuSans'
     UTF8_FONT_BOLD = 'DejaVuSans-Bold'
-    UTF8_FONT_OBLIQUE = 'DejaVuSans-Oblique'
+    UTF8_FONT_OBLIQUE = 'DejaVuSans'  # Fallback to regular since Oblique doesn't exist
 except Exception as e:
     # Fallback to Helvetica if fonts not available
     logging.warning(f"Could not load DejaVuSans fonts: {e}. Using Helvetica (limited UTF-8 support)")

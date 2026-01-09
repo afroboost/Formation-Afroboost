@@ -457,6 +457,185 @@ async def download_level_document_pdf(document_id: str):
         }
     )
 
+# =====================
+# TRAINING SUMMARY PDF (PUBLIC - NO AUTH)
+# =====================
+
+@api_router.get("/training-summary/pdf")
+async def download_training_summary_pdf():
+    """
+    Public endpoint - generates comprehensive training overview PDF
+    No authentication required
+    """
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    # Background - Deep Black
+    c.setFillColor(colors.HexColor('#0a0a0a'))
+    c.rect(0, 0, width, height, fill=True, stroke=False)
+    
+    # Neon Purple border
+    c.setStrokeColor(colors.HexColor('#a855f7'))
+    c.setLineWidth(3)
+    c.rect(2*cm, 2*cm, width - 4*cm, height - 4*cm, fill=False, stroke=True)
+    
+    # Inner border glow effect
+    c.setStrokeColor(colors.HexColor('#c084fc'))
+    c.setLineWidth(1)
+    c.rect(2.2*cm, 2.2*cm, width - 4.4*cm, height - 4.4*cm, fill=False, stroke=True)
+    
+    # Title - AFROBOOST
+    c.setFillColor(colors.HexColor('#a855f7'))
+    c.setFont("Helvetica-Bold", 42)
+    c.drawCentredString(width/2, height - 4.5*cm, "AFROBOOST")
+    
+    # Subtitle
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 20)
+    c.drawCentredString(width/2, height - 6*cm, "Certification Instructeur")
+    
+    c.setFont("Helvetica", 16)
+    c.drawCentredString(width/2, height - 7*cm, "Vue d'Ensemble du Programme Complet")
+    
+    # Section: What is Afroboost
+    y_pos = height - 9*cm
+    c.setFillColor(colors.HexColor('#a855f7'))
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(3*cm, y_pos, "QU'EST-CE QU'AFROBOOST ?")
+    
+    y_pos -= 0.8*cm
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica", 11)
+    text = "Afroboost est une méthode de danse énergique inspirée des rythmes afrobeat,"
+    c.drawString(3*cm, y_pos, text)
+    y_pos -= 0.5*cm
+    text = "combinant fitness, expression corporelle et culture africaine contemporaine."
+    c.drawString(3*cm, y_pos, text)
+    
+    # Section: Training Objectives
+    y_pos -= 1.2*cm
+    c.setFillColor(colors.HexColor('#a855f7'))
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(3*cm, y_pos, "OBJECTIFS DE LA FORMATION")
+    
+    y_pos -= 0.8*cm
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica", 11)
+    objectives = [
+        "• Maîtriser la technique et la pédagogie Afroboost",
+        "• Développer votre style personnel et votre présence scénique",
+        "• Apprendre à enseigner et animer des cours de qualité",
+        "• Obtenir une certification officielle reconnue"
+    ]
+    for obj in objectives:
+        c.drawString(3.5*cm, y_pos, obj)
+        y_pos -= 0.6*cm
+    
+    # Section: Full Module List
+    y_pos -= 0.8*cm
+    c.setFillColor(colors.HexColor('#a855f7'))
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(3*cm, y_pos, "PARCOURS DE FORMATION COMPLET")
+    
+    y_pos -= 0.8*cm
+    c.setFillColor(colors.HexColor('#c084fc'))
+    c.setFont("Helvetica-Bold", 11)
+    
+    modules = [
+        ("Level 1 – Afroboost DNA", "Fondamentaux: mouvements de base, rythme et coordination"),
+        ("Level 2 – Rhythm Foundation", "Variations rythmiques, transitions et musicalité avancée"),
+        ("Level 3 – Style & Flow", "Expression personnelle, improvisation et performance"),
+        ("Level 4 – Teaching Fundamentals", "Pédagogie, communication et structuration de cours"),
+        ("Level 5 – Master Instructor", "Chorégraphies originales, mentorat et leadership")
+    ]
+    
+    for module_name, description in modules:
+        c.setFillColor(colors.HexColor('#c084fc'))
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(3.5*cm, y_pos, module_name)
+        y_pos -= 0.5*cm
+        c.setFillColor(colors.white)
+        c.setFont("Helvetica", 9)
+        c.drawString(3.8*cm, y_pos, description)
+        y_pos -= 0.8*cm
+    
+    # Section: Certification Paths
+    y_pos -= 0.6*cm
+    c.setFillColor(colors.HexColor('#a855f7'))
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(3*cm, y_pos, "PARCOURS DE CERTIFICATION")
+    
+    y_pos -= 0.8*cm
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 11)
+    
+    paths = [
+        ("🌐 CERTIFICATION EN LIGNE", "Autorisé à enseigner Afroboost en ligne"),
+        ("🏢 CERTIFICATION PRÉSENTIEL", "Autorisé à enseigner Afroboost en présentiel"),
+        ("🌟 CERTIFICATION HYBRIDE", "Autorisé à enseigner Afroboost en ligne et présentiel")
+    ]
+    
+    for path_name, path_desc in paths:
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(3.5*cm, y_pos, path_name)
+        y_pos -= 0.5*cm
+        c.setFont("Helvetica", 9)
+        c.drawString(3.8*cm, y_pos, path_desc)
+        y_pos -= 0.8*cm
+    
+    # Section: Rights After Certification
+    y_pos -= 0.6*cm
+    c.setFillColor(colors.HexColor('#a855f7'))
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(3*cm, y_pos, "DROITS APRÈS CERTIFICATION")
+    
+    y_pos -= 0.8*cm
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica", 11)
+    rights = [
+        "• Utiliser le titre d'Instructeur Certifié Afroboost",
+        "• Enseigner la méthode Afroboost selon votre certification",
+        "• Accès à la communauté des instructeurs certifiés",
+        "• Diplômes officiels imprimables et vérifiables"
+    ]
+    for right in rights:
+        c.drawString(3.5*cm, y_pos, right)
+        y_pos -= 0.6*cm
+    
+    # Important Notice Box
+    y_pos -= 1*cm
+    c.setStrokeColor(colors.HexColor('#a855f7'))
+    c.setFillColor(colors.HexColor('#1a0a2e'))
+    c.roundRect(3*cm, y_pos - 1.5*cm, width - 6*cm, 1.8*cm, 0.2*cm, fill=True, stroke=True)
+    
+    c.setFillColor(colors.HexColor('#fbbf24'))
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(3.5*cm, y_pos - 0.5*cm, "⚠️ AVIS IMPORTANT")
+    
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica", 9)
+    c.drawString(3.5*cm, y_pos - 0.9*cm, "Ce document est officiel et imprimable.")
+    c.drawString(3.5*cm, y_pos - 1.2*cm, "Il ne confère pas de certification. La certification s'obtient après validation.")
+    
+    # Footer
+    c.setFillColor(colors.HexColor('#71717a'))
+    c.setFont("Helvetica-Oblique", 10)
+    c.drawCentredString(width/2, 2.8*cm, "Programme de Formation Afroboost – Document Officiel")
+    c.setFont("Helvetica", 8)
+    c.drawCentredString(width/2, 2.3*cm, "Pour plus d'informations: afroboost.com")
+    
+    c.save()
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": "attachment; filename=afroboost_training_summary.pdf"
+        }
+    )
+
 # Include the router in the main app
 app.include_router(api_router)
 

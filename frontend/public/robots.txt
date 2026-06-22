@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin-login
+
+Sitemap: https://formation.afroboosteur.com/sitemap.xml

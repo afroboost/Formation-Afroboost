@@ -17,6 +17,8 @@ import ShareButton from '@/components/ShareButton';
 import LevelTrainingPage from '@/LevelTrainingPage';
 import AdminLoginPage from '@/AdminLoginPage';
 import PaymentSuccessPage from '@/PaymentSuccessPage';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -578,6 +580,8 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
+        <Header />
+        <main>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/landing" element={<LandingPage />} />
@@ -591,6 +595,8 @@ function App() {
           <Route path="/admin-login" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Routes>
+        </main>
+        <Footer />
       </BrowserRouter>
       <Toaster position="top-right" />
     </div>

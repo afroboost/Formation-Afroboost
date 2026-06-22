@@ -86,3 +86,56 @@ code {
         border-bottom-color: inherit;
     }
 }
+
+/* ====================== AFROBOOST THEME OVERRIDE ======================
+   Harmonisation des couleurs de la plateforme Formation avec afroboosteur.com
+   Palette : fond #1a0a1a · violet neon #8a2be2 · fuchsia #ff00ff · magenta #e91e63
+   Les composants shadcn/ui consomment ces variables via hsl(var(--xxx)).
+   ===================================================================== */
+:root,
+.dark {
+  --background: 300 44% 7%;        /* #1a0a1a */
+  --foreground: 0 0% 100%;         /* #ffffff */
+  --card: 300 24% 13%;             /* #2a1a2a */
+  --card-foreground: 0 0% 100%;
+  --popover: 300 24% 13%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 271 76% 53%;          /* #8a2be2 violet neon */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 340 82% 52%;        /* #e91e63 magenta */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 300 100% 50%;          /* #ff00ff fuchsia */
+  --accent-foreground: 0 0% 100%;
+  --muted: 300 20% 18%;
+  --muted-foreground: 0 0% 88%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 271 40% 25%;
+  --input: 271 40% 25%;
+  --ring: 300 100% 50%;
+}
+body {
+  background-color: #1a0a1a;
+  color: #ffffff;
+}
+.afro-gradient,
+.gradient-text {
+  background: linear-gradient(135deg, #8a2be2, #ff00ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.btn-brand,
+button.bg-primary {
+  background-image: linear-gradient(135deg, #8a2be2, #ff00ff) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 0 18px rgba(255, 0, 255, 0.35);
+}
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #1a0a1a; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #8a2be2, #ff00ff);
+  border-radius: 4px;
+}
+/* ==================== FIN AFROBOOST THEME OVERRIDE ==================== */

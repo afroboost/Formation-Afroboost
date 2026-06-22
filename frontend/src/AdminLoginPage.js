@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { Shield, Mail, LogIn } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { firebaseAuth } from '@/lib/firebaseClient';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { setSecretHeader, setBearer } from '@/lib/adminAuth';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -72,6 +72,24 @@ const AdminLoginPage = () => {
       console.error('Login error:', err);
     } finally {
       setSupLoading(false);
+    }
+  };
+
+  // --- Mot de passe oublie (Firebase) ---
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      toast.error('Entrez votre email ci-dessus, puis cliquez sur « Mot de passe oublié ».');
+      return;
+    }
+    try {
+      if (!firebaseAuth) throw new Error('firebase indisponible');
+      await sendPasswordResetEmail(firebaseAuth, email.trim());
+    } catch {
+      // on n'expose pas si le compte existe (securite)
+    } finally {
+      toast.success(
+        "Si un compte existe pour cet email, un lien de réinitialisation vient d'être envoyé (vérifiez vos spams)."
+      );
     }
   };
 
@@ -191,6 +209,17 @@ const AdminLoginPage = () => {
                   )}
                 </Button>
               </form>
+
+              <div className="text-center mt-3">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-purple-400 text-sm hover:underline"
+                  data-testid="forgot-password-link"
+                >
+                  Mot de passe oublié ?
+                </button>
+              </div>
 
               {/* Separateur */}
               <div className="flex items-center gap-3 my-6">

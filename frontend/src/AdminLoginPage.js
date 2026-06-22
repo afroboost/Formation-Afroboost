@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Shield, Mail, LogIn } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { firebaseAuth } from '@/lib/firebaseClient';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { setSecretHeader, setBearer } from '@/lib/adminAuth';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -23,19 +25,33 @@ const AdminLoginPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // --- Connexion unifiee via Supabase (meme compte que afroboosteur.com) ---
+  // --- Connexion unifiee Afroboosteur : Firebase d'abord, repli Supabase ---
   const handleSupabaseLogin = async (e) => {
     e.preventDefault();
-    if (!supabase) {
-      toast.error("La connexion Afroboosteur n'est pas configuree ici.");
-      return;
-    }
     if (!email.trim() || !password) {
       toast.error('Email et mot de passe requis');
       return;
     }
     setSupLoading(true);
     try {
+      // 1) Firebase (nouveau fournisseur d'identite)
+      if (firebaseAuth) {
+        try {
+          const cred = await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
+          setBearer(await cred.user.getIdToken());
+          toast.success('Connexion Afroboosteur reussie');
+          navigate('/admin');
+          return;
+        } catch (fbErr) {
+          // compte/mot de passe non valides cote Firebase -> on tente Supabase
+          console.warn('Firebase login fallback:', fbErr?.code || fbErr);
+        }
+      }
+      // 2) Repli Supabase (transition)
+      if (!supabase) {
+        toast.error('Email ou mot de passe incorrect');
+        return;
+      }
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -53,7 +69,7 @@ const AdminLoginPage = () => {
       navigate('/admin');
     } catch (err) {
       toast.error('Une erreur est survenue. Veuillez reessayer.');
-      console.error('Supabase login error:', err);
+      console.error('Login error:', err);
     } finally {
       setSupLoading(false);
     }

@@ -342,26 +342,70 @@ def verify_supabase_jwt(token: str) -> dict:
     return payload
 
 
+# --- Firebase (Google securetoken, RS256) — clés publiques uniquement ---
+FIREBASE_PROJECT_ID = os.environ.get('FIREBASE_PROJECT_ID', '')
+FIREBASE_JWKS_URL = os.environ.get(
+    'FIREBASE_JWKS_URL',
+    'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com',
+)
+
+_fb_jwks_client = None
+
+
+def _get_fb_jwks_client():
+    global _fb_jwks_client
+    if _fb_jwks_client is None and FIREBASE_JWKS_URL:
+        from jwt import PyJWKClient
+        _fb_jwks_client = PyJWKClient(FIREBASE_JWKS_URL, cache_keys=True)
+    return _fb_jwks_client
+
+
+def verify_firebase_jwt(token: str) -> dict:
+    """Verifie un ID token Firebase (RS256) via les cles publiques Google."""
+    import jwt as _pyjwt
+    client = _get_fb_jwks_client()
+    if client is None or not FIREBASE_PROJECT_ID:
+        raise ValueError("Firebase non configure")
+    signing_key = client.get_signing_key_from_jwt(token)
+    payload = _pyjwt.decode(
+        token,
+        signing_key.key,
+        algorithms=["RS256"],
+        audience=FIREBASE_PROJECT_ID,
+        issuer=f"https://securetoken.google.com/{FIREBASE_PROJECT_ID}",
+        options={"require": ["exp"]},
+    )
+    return payload
+
+
 async def require_admin(
     authorization: Optional[str] = Header(None),
     x_admin_secret: Optional[str] = Header(None),
 ):
-    """Autorise si (a) secret admin legacy valide OU (b) JWT Supabase valide
-    dont l'email figure dans ADMIN_EMAILS. Sinon 401/403."""
+    """Autorise si (a) secret admin legacy, (b) ID token Firebase, ou
+    (c) JWT Supabase — dont l'email figure dans ADMIN_EMAILS. Sinon 401/403.
+    Les trois methodes cohabitent (transition Supabase -> Firebase)."""
     # (a) Secret legacy (transition) — via en-tete X-Admin-Secret
     if x_admin_secret and x_admin_secret == ADMIN_SECRET_ID:
         return {"method": "secret", "sub": "legacy-admin"}
-    # (b) JWT Supabase — via en-tete Authorization: Bearer <token>
+    # (b/c) Jeton porteur : Firebase OU Supabase — via Authorization: Bearer <token>
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization.split(" ", 1)[1].strip()
-        try:
-            payload = verify_supabase_jwt(token)
-        except Exception:
-            raise HTTPException(status_code=401, detail="Jeton Supabase invalide ou expire")
+        payload = None
+        method = None
+        for name, verifier in (("firebase", verify_firebase_jwt), ("supabase", verify_supabase_jwt)):
+            try:
+                payload = verifier(token)
+                method = name
+                break
+            except Exception:
+                continue
+        if payload is None:
+            raise HTTPException(status_code=401, detail="Jeton invalide ou expire")
         email = (payload.get("email") or "").lower()
         if email not in ADMIN_EMAILS:
             raise HTTPException(status_code=403, detail="Compte non autorise pour l'administration")
-        return {"method": "supabase", "sub": email}
+        return {"method": method, "sub": email}
     raise HTTPException(status_code=401, detail="Authentification administrateur requise")
 
 

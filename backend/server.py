@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Response, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Response, Request, Depends, Header
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -299,11 +299,77 @@ class PaymentWebhook(BaseModel):
 # Hardcoded admin secret (in production, use env variable)
 ADMIN_SECRET_ID = os.environ.get('ADMIN_SECRET_ID', 'AFRO-ADMIN-2025')
 
+# ============================================================================
+# Authentification admin UNIFIEE : JWT Supabase (JWKS/ES256) OU secret legacy
+# Non destructif : l'ancien secret reste accepte pendant la transition.
+# Aucun secret en dur : tout vient de l'environnement.
+# ============================================================================
+ADMIN_EMAILS = {
+    e.strip().lower()
+    for e in os.environ.get('ADMIN_EMAILS', 'contact.artboost@gmail.com').split(',')
+    if e.strip()
+}
+SUPABASE_JWKS_URL = os.environ.get('SUPABASE_JWKS_URL', '')
+SUPABASE_ISSUER = os.environ.get('SUPABASE_ISSUER', '')
+
+_jwks_client = None
+
+
+def _get_jwks_client():
+    global _jwks_client
+    if _jwks_client is None and SUPABASE_JWKS_URL:
+        from jwt import PyJWKClient
+        _jwks_client = PyJWKClient(SUPABASE_JWKS_URL, cache_keys=True)
+    return _jwks_client
+
+
+def verify_supabase_jwt(token: str) -> dict:
+    """Verifie cryptographiquement un access token Supabase (ES256/RS256) via JWKS."""
+    import jwt as _pyjwt
+    client = _get_jwks_client()
+    if client is None:
+        raise ValueError("JWKS Supabase non configure")
+    signing_key = client.get_signing_key_from_jwt(token)
+    payload = _pyjwt.decode(
+        token,
+        signing_key.key,
+        algorithms=["ES256", "RS256"],
+        audience="authenticated",
+        options={"require": ["exp"]},
+    )
+    if SUPABASE_ISSUER and payload.get("iss") != SUPABASE_ISSUER:
+        raise ValueError("issuer invalide")
+    return payload
+
+
+async def require_admin(
+    authorization: Optional[str] = Header(None),
+    x_admin_secret: Optional[str] = Header(None),
+):
+    """Autorise si (a) secret admin legacy valide OU (b) JWT Supabase valide
+    dont l'email figure dans ADMIN_EMAILS. Sinon 401/403."""
+    # (a) Secret legacy (transition) — via en-tete X-Admin-Secret
+    if x_admin_secret and x_admin_secret == ADMIN_SECRET_ID:
+        return {"method": "secret", "sub": "legacy-admin"}
+    # (b) JWT Supabase — via en-tete Authorization: Bearer <token>
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        try:
+            payload = verify_supabase_jwt(token)
+        except Exception:
+            raise HTTPException(status_code=401, detail="Jeton Supabase invalide ou expire")
+        email = (payload.get("email") or "").lower()
+        if email not in ADMIN_EMAILS:
+            raise HTTPException(status_code=403, detail="Compte non autorise pour l'administration")
+        return {"method": "supabase", "sub": email}
+    raise HTTPException(status_code=401, detail="Authentification administrateur requise")
+
+
 # =====================
 # EXAM DATES ENDPOINTS
 # =====================
 
-@api_router.post("/exam-dates", response_model=ExamDate)
+@api_router.post("/exam-dates", response_model=ExamDate, dependencies=[Depends(require_admin)])
 async def create_exam_date(input: ExamDateCreate):
     exam_date_dict = input.model_dump()
     exam_date_obj = ExamDate(**exam_date_dict)
@@ -324,7 +390,7 @@ async def get_exam_dates():
     
     return exam_dates
 
-@api_router.delete("/exam-dates/{exam_date_id}")
+@api_router.delete("/exam-dates/{exam_date_id}", dependencies=[Depends(require_admin)])
 async def delete_exam_date(exam_date_id: str):
     result = await db.exam_dates.delete_one({"id": exam_date_id})
     if result.deleted_count == 0:
@@ -396,7 +462,7 @@ async def get_student_bookings(student_id: str):
     
     return bookings
 
-@api_router.put("/exam-bookings/{booking_id}/result")
+@api_router.put("/exam-bookings/{booking_id}/result", dependencies=[Depends(require_admin)])
 async def update_exam_result(booking_id: str, result: ExamResult):
     booking = await db.exam_bookings.find_one({"id": booking_id})
     if not booking:
@@ -427,7 +493,7 @@ async def update_exam_result(booking_id: str, result: ExamResult):
 # CERTIFICATES ENDPOINTS
 # =====================
 
-@api_router.post("/certificates", response_model=Certificate)
+@api_router.post("/certificates", response_model=Certificate, dependencies=[Depends(require_admin)])
 async def create_certificate(input: CertificateCreate):
     cert_obj = Certificate(**input.model_dump())
     
@@ -754,7 +820,7 @@ async def download_level_document_pdf(document_id: str):
 # LEVEL CONTENT ENDPOINTS
 # =====================
 
-@api_router.post("/level-content")
+@api_router.post("/level-content", dependencies=[Depends(require_admin)])
 async def create_or_update_level_content(input: LevelContentCreate):
     # Check if content already exists for this level
     existing = await db.level_content.find_one({"level_id": input.level_id})
@@ -860,7 +926,7 @@ async def update_level_progress(input: ProgressUpdate):
     
     return progress
 
-@api_router.get("/level-progress/admin/all")
+@api_router.get("/level-progress/admin/all", dependencies=[Depends(require_admin)])
 async def get_all_progress_admin():
     """Admin endpoint to get all progress records - always returns array"""
     try:
@@ -1057,7 +1123,7 @@ async def admin_recovery_request(recovery: AdminRecovery):
 # USER ACCESS MANAGEMENT ENDPOINTS (COMPLETE CRUD)
 # =====================
 
-@api_router.get("/access")
+@api_router.get("/access", dependencies=[Depends(require_admin)])
 async def get_all_access(
     user_id: Optional[str] = None,
     level_id: Optional[str] = None,
@@ -1091,7 +1157,7 @@ async def get_all_access(
     
     return access_list
 
-@api_router.get("/access/{access_id}")
+@api_router.get("/access/{access_id}", dependencies=[Depends(require_admin)])
 async def get_access_by_id(access_id: str):
     """Get a specific access record by ID"""
     access = await db.user_access.find_one({"id": access_id}, {"_id": 0})
@@ -1099,7 +1165,7 @@ async def get_access_by_id(access_id: str):
         raise HTTPException(status_code=404, detail="Access not found")
     return access
 
-@api_router.post("/access")
+@api_router.post("/access", dependencies=[Depends(require_admin)])
 async def create_access(input: UserAccessCreate):
     """Admin creates a new access for a user"""
     # Check if access already exists
@@ -1151,7 +1217,7 @@ async def create_access(input: UserAccessCreate):
     result = await db.user_access.find_one({"id": access.id}, {"_id": 0})
     return result
 
-@api_router.put("/access/{access_id}")
+@api_router.put("/access/{access_id}", dependencies=[Depends(require_admin)])
 async def update_access(access_id: str, input: UserAccessUpdate):
     """Admin updates an existing access"""
     access = await db.user_access.find_one({"id": access_id})
@@ -1188,7 +1254,7 @@ async def update_access(access_id: str, input: UserAccessUpdate):
     
     return updated_access
 
-@api_router.delete("/access/{access_id}")
+@api_router.delete("/access/{access_id}", dependencies=[Depends(require_admin)])
 async def delete_access(access_id: str):
     """Admin deletes an access record"""
     access = await db.user_access.find_one({"id": access_id})
@@ -1209,7 +1275,7 @@ async def delete_access(access_id: str):
     
     return {"success": True, "message": "Accès supprimé avec succès"}
 
-@api_router.post("/access/{access_id}/revoke")
+@api_router.post("/access/{access_id}/revoke", dependencies=[Depends(require_admin)])
 async def revoke_access(access_id: str, input: UserAccessRevoke):
     """Admin revokes an active access"""
     access = await db.user_access.find_one({"id": access_id})
@@ -1246,7 +1312,7 @@ async def revoke_access(access_id: str, input: UserAccessRevoke):
 # PAYMENT TRANSACTION ENDPOINTS (MULTI-REGION)
 # =====================
 
-@api_router.get("/payments/history")
+@api_router.get("/payments/history", dependencies=[Depends(require_admin)])
 async def get_payment_history(
     user_id: Optional[str] = None,
     level_id: Optional[str] = None,
@@ -1429,7 +1495,7 @@ async def payment_webhook(input: PaymentWebhook):
     
     return {"success": True, "status": update_data.get("status", input.status)}
 
-@api_router.post("/payments/{transaction_id}/complete")
+@api_router.post("/payments/{transaction_id}/complete", dependencies=[Depends(require_admin)])
 async def complete_payment_manual(transaction_id: str):
     """Admin manually completes a payment (for manual verification)"""
     transaction = await db.payment_transactions.find_one({"id": transaction_id})
@@ -1876,7 +1942,7 @@ async def create_flutterwave_payment(input: PaymentInitiate):
 # LEVEL PAYMENT CONFIG ENDPOINTS
 # =====================
 
-@api_router.post("/level-payment-config")
+@api_router.post("/level-payment-config", dependencies=[Depends(require_admin)])
 async def create_or_update_payment_config(config: LevelPaymentConfigCreate):
     """Admin creates or updates payment configuration for a level"""
     existing = await db.level_payment_config.find_one({"level_id": config.level_id})

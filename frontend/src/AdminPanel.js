@@ -14,6 +14,7 @@ import AdminContentManager from '@/AdminContentManager';
 import AdminAccessComplete from '@/AdminAccessComplete';
 import AdminPaymentConfig from '@/AdminPaymentConfig';
 import AdminPaymentHistory from '@/AdminPaymentHistory';
+import { initAdminAuth, isAdminAuthenticated } from '@/lib/adminAuth';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -52,15 +53,21 @@ const AdminPanel = () => {
   };
 
   useEffect(() => {
-    // Check admin session
-    const adminSession = localStorage.getItem('afroboost_admin_session');
-    if (!adminSession) {
-      navigate('/admin-login');
-      return;
-    }
-    
-    fetchExamDates();
-    fetchBookings();
+    let active = true;
+    (async () => {
+      await initAdminAuth();
+      const ok = await isAdminAuthenticated();
+      if (!active) return;
+      if (!ok) {
+        navigate('/admin-login');
+        return;
+      }
+      fetchExamDates();
+      fetchBookings();
+    })();
+    return () => {
+      active = false;
+    };
   }, [navigate]);
 
   const handleCreateDate = async () => {

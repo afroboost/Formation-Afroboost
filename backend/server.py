@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Response, Request, Depends, Header
+from fastapi import FastAPI, APIRouter, HTTPException, Response, Request, Depends, Header, Cookie
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -378,35 +378,91 @@ def verify_firebase_jwt(token: str) -> dict:
     return payload
 
 
+# --- Session cookie Firebase (SSO partage .afroboosteur.com) — clés publiques ---
+_fb_session_certs = {"data": None, "ts": 0.0}
+
+
+def _get_session_certs():
+    import time as _t
+    import requests as _rq
+    if _fb_session_certs["data"] is None or (_t.time() - _fb_session_certs["ts"]) > 3600:
+        r = _rq.get(
+            "https://www.googleapis.com/identitytoolkit/v3/relyingparty/publicKeys",
+            timeout=10,
+        )
+        _fb_session_certs["data"] = r.json()
+        _fb_session_certs["ts"] = _t.time()
+    return _fb_session_certs["data"]
+
+
+def verify_firebase_session_cookie(cookie: str) -> dict:
+    """Verifie un session cookie Firebase (RS256) via les certificats publics Google."""
+    import jwt as _pyjwt
+    from cryptography.x509 import load_pem_x509_certificate
+    if not FIREBASE_PROJECT_ID:
+        raise ValueError("Firebase non configure")
+    kid = _pyjwt.get_unverified_header(cookie).get("kid")
+    pem = (_get_session_certs() or {}).get(kid)
+    if not pem:
+        raise ValueError("kid inconnu")
+    pub = load_pem_x509_certificate(pem.encode()).public_key()
+    return _pyjwt.decode(
+        cookie,
+        pub,
+        algorithms=["RS256"],
+        audience=FIREBASE_PROJECT_ID,
+        issuer=f"https://session.firebase.google.com/{FIREBASE_PROJECT_ID}",
+        options={"require": ["exp"]},
+    )
+
+
 async def require_admin(
     authorization: Optional[str] = Header(None),
     x_admin_secret: Optional[str] = Header(None),
+    fb_session: Optional[str] = Cookie(None),
 ):
-    """Autorise si (a) secret admin legacy, (b) ID token Firebase, ou
-    (c) JWT Supabase — dont l'email figure dans ADMIN_EMAILS. Sinon 401/403.
-    Les trois methodes cohabitent (transition Supabase -> Firebase)."""
-    # (a) Secret legacy (transition) — via en-tete X-Admin-Secret
+    """Autorise si secret legacy, ID token Firebase, JWT Supabase, OU cookie de
+    session Firebase partage (.afroboosteur.com), dont l'email est dans ADMIN_EMAILS."""
+    # (a) Secret legacy — en-tete X-Admin-Secret
     if x_admin_secret and x_admin_secret == ADMIN_SECRET_ID:
         return {"method": "secret", "sub": "legacy-admin"}
-    # (b/c) Jeton porteur : Firebase OU Supabase — via Authorization: Bearer <token>
+    candidate = None  # (method, payload)
+    # (b/c) Jeton porteur : Firebase ID token OU JWT Supabase
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization.split(" ", 1)[1].strip()
-        payload = None
-        method = None
         for name, verifier in (("firebase", verify_firebase_jwt), ("supabase", verify_supabase_jwt)):
             try:
-                payload = verifier(token)
-                method = name
+                candidate = (name, verifier(token))
                 break
             except Exception:
                 continue
-        if payload is None:
-            raise HTTPException(status_code=401, detail="Jeton invalide ou expire")
-        email = (payload.get("email") or "").lower()
-        if email not in ADMIN_EMAILS:
-            raise HTTPException(status_code=403, detail="Compte non autorise pour l'administration")
-        return {"method": method, "sub": email}
-    raise HTTPException(status_code=401, detail="Authentification administrateur requise")
+    # (d) Cookie de session Firebase partage (SSO)
+    if candidate is None and fb_session:
+        try:
+            candidate = ("session-cookie", verify_firebase_session_cookie(fb_session))
+        except Exception:
+            candidate = None
+    if candidate is None:
+        raise HTTPException(status_code=401, detail="Authentification administrateur requise")
+    method, payload = candidate
+    email = (payload.get("email") or "").lower()
+    if email not in ADMIN_EMAILS:
+        raise HTTPException(status_code=403, detail="Compte non autorise pour l'administration")
+    return {"method": method, "sub": email}
+
+
+@api_router.get("/auth/me")
+async def auth_me(
+    authorization: Optional[str] = Header(None),
+    x_admin_secret: Optional[str] = Header(None),
+    fb_session: Optional[str] = Cookie(None),
+):
+    """Etat d'authentification admin (utilise par le frontend pour le SSO)."""
+    try:
+        info = await require_admin(authorization, x_admin_secret, fb_session)
+        return {"authenticated": True, "admin": True, "email": info.get("sub"), "method": info.get("method")}
+    except HTTPException:
+        return {"authenticated": False, "admin": False}
 
 
 # =====================

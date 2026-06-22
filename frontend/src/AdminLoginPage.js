@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,9 @@ import { Shield, Mail, LogIn } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { firebaseAuth } from '@/lib/firebaseClient';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { setSecretHeader, setBearer } from '@/lib/adminAuth';
+import { setSecretHeader, setBearer, hasSharedSession } from '@/lib/adminAuth';
+
+const AFRO_LOGIN = 'https://afroboosteur.com/api/auth/firebase-login';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -25,6 +27,11 @@ const AdminLoginPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // SSO : si deja connecte via le cookie partage (.afroboosteur.com), entrer directement.
+  useEffect(() => {
+    hasSharedSession().then((ok) => { if (ok) navigate('/admin'); });
+  }, [navigate]);
+
   // --- Connexion unifiee Afroboosteur : Firebase d'abord, repli Supabase ---
   const handleSupabaseLogin = async (e) => {
     e.preventDefault();
@@ -38,7 +45,17 @@ const AdminLoginPage = () => {
       if (firebaseAuth) {
         try {
           const cred = await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
-          setBearer(await cred.user.getIdToken());
+          const idToken = await cred.user.getIdToken();
+          setBearer(idToken);
+          // SSO bidirectionnel : pose le cookie de session partage cote afroboosteur.com
+          try {
+            await fetch(AFRO_LOGIN, {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ idToken }),
+            });
+          } catch { /* non bloquant */ }
           toast.success('Connexion Afroboosteur reussie');
           navigate('/admin');
           return;

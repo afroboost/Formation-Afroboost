@@ -81,6 +81,46 @@ const LandingPage = () => {
               </Button>
             </Link>
           </div>
+
+          {/* Visuel premium : plateforme web + mobile */}
+          <div className="mt-14 max-w-4xl mx-auto">
+            <div
+              className="relative rounded-2xl overflow-hidden border border-purple-500/30"
+              style={{ boxShadow: '0 0 60px rgba(138,43,226,0.25)' }}
+            >
+              <img
+                src="/visuals/materiel/plateforme.jpg"
+                alt="Plateforme de formation Afroboost sur ordinateur et mobile"
+                className="w-full h-auto"
+                loading="lazy"
+              />
+            </div>
+            <p className="text-gray-400 text-sm mt-3">
+              Votre plateforme de formation premium, sur ordinateur et mobile.
+            </p>
+          </div>
+        </div>
+
+        {/* Section événementielle : tente Afroboost en festival */}
+        <div className="mb-20">
+          <div className="relative rounded-2xl overflow-hidden border border-purple-500/30">
+            <img
+              src="/visuals/materiel/tente.jpg"
+              alt="Tente Afroboost Spider 7x7 en festival"
+              className="w-full h-[260px] sm:h-[440px] object-cover"
+              loading="lazy"
+            />
+            <div
+              className="absolute inset-0"
+              style={{ background: 'linear-gradient(to top, #160a18 0%, rgba(22,10,24,0.25) 45%, transparent 75%)' }}
+            ></div>
+            <div className="absolute bottom-0 left-0 p-6 sm:p-10">
+              <h3 className="text-2xl sm:text-4xl font-bold text-white mb-2">Du studio au festival</h3>
+              <p className="text-gray-200 max-w-xl">
+                Animez des événements Silent en plein air avec la tente Afroboost Spider 7×7 — montage en 15 minutes.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Features Grid */}

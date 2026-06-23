@@ -1078,19 +1078,15 @@ async def submit_quiz(input: QuizSubmit, request: Request):
         "created_at": now.isoformat(),
     })
     if passed:
+        # Valide UNIQUEMENT le niveau courant (quiz reussi). On NE touche PAS a l'acces
+        # ni au payment_status du niveau suivant : l'acces reste gere par le paiement/
+        # engagement (pas de contournement du paiement Stripe). Le quiz reussi sert de
+        # condition de progression (prerequis), pas d'octroi d'acces gratuit.
         await db.user_level_progress.update_one(
             {"user_id": input.user_id, "level_id": input.level_id},
             {"$set": {"quiz_passed": True, "updated_at": now.isoformat()}}, upsert=True)
-        nxt = _next_level_id(input.level_id)
-        if nxt:
-            await db.user_level_progress.update_one(
-                {"user_id": input.user_id, "level_id": nxt},
-                {"$set": {"access_granted": True, "access_status": "active",
-                          "payment_status": "not_required", "updated_at": now.isoformat()}},
-                upsert=True)
     return {"passed": passed, "score": correct, "total": total, "percent": percent,
-            "pass_score": pass_score,
-            "next_unlocked": bool(passed and _next_level_id(input.level_id))}
+            "pass_score": pass_score, "level_validated": bool(passed)}
 
 @api_router.get("/quiz/result/{user_id}/{level_id}")
 async def quiz_result(user_id: str, level_id: str):

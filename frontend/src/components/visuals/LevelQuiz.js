@@ -252,6 +252,14 @@ const LevelQuiz = ({ levelId, quiz, userId, onPassed }) => {
                 className="rounded-lg border border-white/10 bg-black/20 p-4"
                 data-testid={`quiz-question-${qIndex}`}
               >
+                {question.scenario && (
+                  <span
+                    className="inline-flex items-center mb-2 px-2 py-0.5 rounded-full text-[11px] font-semibold text-white"
+                    style={{ background: 'linear-gradient(135deg,#8a2be2,#ff00ff)' }}
+                  >
+                    Mise en situation
+                  </span>
+                )}
                 <p className="text-white font-medium mb-3">
                   <span className={`font-bold ${gradientText} mr-1`}>
                     {qIndex + 1}.

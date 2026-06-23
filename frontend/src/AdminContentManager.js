@@ -33,6 +33,7 @@ const AdminContentManager = () => {
   const [mapMarkers, setMapMarkers] = useState([]);
   const [muscleMarkers, setMuscleMarkers] = useState([]);
   const [quiz, setQuiz] = useState({ pass_score: 80, questions: [] });
+  const [faq, setFaq] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const loadLevelContent = async (levelId) => {
@@ -51,6 +52,7 @@ const AdminContentManager = () => {
       setMapMarkers(data.map_markers || []);
       setMuscleMarkers(data.muscle_markers || []);
       setQuiz(data.quiz && data.quiz.questions ? data.quiz : { pass_score: 80, questions: [] });
+      setFaq(data.faq || []);
     } catch (error) {
       console.error('Error loading content:', error);
     }
@@ -175,6 +177,23 @@ const AdminContentManager = () => {
     );
     setQuiz({ ...quiz, questions });
   };
+  const setScenario = (qIndex, checked) => {
+    setQuiz({
+      ...quiz,
+      questions: (quiz.questions || []).map((qq, i) =>
+        i === qIndex ? { ...qq, scenario: !!checked } : qq
+      )
+    });
+  };
+
+  // FAQ helpers (immutable)
+  const addFaq = () => setFaq([...faq, { id: `faq-${Date.now()}`, q: '', a: '' }]);
+  const updateFaq = (index, field, value) => {
+    const updated = [...faq];
+    updated[index] = { ...updated[index], [field]: value };
+    setFaq(updated);
+  };
+  const removeFaq = (index) => setFaq(faq.filter((_, i) => i !== index));
 
   const handleSave = async () => {
     if (!selectedLevel) return;
@@ -193,7 +212,8 @@ const AdminContentManager = () => {
         youtube_url: youtubeUrl,
         map_markers: mapMarkers,
         muscle_markers: muscleMarkers,
-        quiz
+        quiz,
+        faq
       });
       toast.success('Contenu sauvegardé!');
     } catch (error) {
@@ -286,6 +306,40 @@ const AdminContentManager = () => {
                   className="input-dark min-h-[200px]"
                   data-testid="text-content-input"
                 />
+              </div>
+
+              {/* Questions des participants (FAQ) */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-gray-300 text-lg">Questions des participants (FAQ)</Label>
+                  <Button onClick={addFaq} size="sm" className="btn-neon" data-testid="add-faq">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Ajouter une question
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  {faq.map((item, index) => (
+                    <div key={item.id || index} className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <Input
+                        placeholder="Question du participant"
+                        value={item.q || ''}
+                        onChange={(e) => updateFaq(index, 'q', e.target.value)}
+                        className="input-dark mb-2"
+                      />
+                      <div className="flex gap-2">
+                        <Textarea
+                          placeholder="Réponse (ton simple, bienveillant ; orienter vers un professionnel pour la santé)"
+                          value={item.a || ''}
+                          onChange={(e) => updateFaq(index, 'a', e.target.value)}
+                          className="input-dark flex-1"
+                        />
+                        <Button onClick={() => removeFaq(index)} variant="destructive" size="sm">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Visuels (remplaçables) */}
@@ -496,6 +550,16 @@ const AdminContentManager = () => {
                         <Button onClick={() => removeQuestion(qIndex)} variant="destructive" size="sm">
                           <Trash2 className="w-4 h-4" />
                         </Button>
+                      </div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Checkbox
+                          id={`scenario-${qIndex}`}
+                          checked={!!question.scenario}
+                          onCheckedChange={(c) => setScenario(qIndex, c)}
+                        />
+                        <Label htmlFor={`scenario-${qIndex}`} className="text-gray-400 text-sm cursor-pointer">
+                          Mise en situation
+                        </Label>
                       </div>
                       <Label className="text-gray-400 text-sm mb-2 block">
                         Réponses (cocher la bonne)

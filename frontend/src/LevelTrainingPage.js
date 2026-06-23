@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { PlayCircle, FileText, Video, CheckCircle, Lock, Calendar, Users, ArrowLeft, Image, Award } from 'lucide-react';
+import { PlayCircle, FileText, Video, CheckCircle, Lock, Calendar, Users, ArrowLeft, Image, Award, HelpCircle } from 'lucide-react';
+import FaqAccordion from '@/components/visuals/FaqAccordion';
 import AfricaStylesMap from '@/components/visuals/AfricaStylesMap';
 import AnatomyDiagram from '@/components/visuals/AnatomyDiagram';
 import StyleGallery from '@/components/visuals/StyleGallery';
@@ -379,6 +380,20 @@ const LevelTrainingPage = () => {
               )}
             </CardContent>
           </Card>
+
+          {content?.faq?.length > 0 && (
+            <Card className="card-dark border-neon mt-8" data-testid="faq-content">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2"><HelpCircle size={20} /> Questions des participants</CardTitle>
+                <CardDescription className="text-gray-400">
+                  La banque de réponses à maîtriser. Cliquez une question pour voir la réponse.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FaqAccordion items={content.faq} />
+              </CardContent>
+            </Card>
+          )}
 
           {content?.quiz?.questions?.length > 0 && (
             <Card className="card-dark border-neon mt-8" data-testid="quiz-content">

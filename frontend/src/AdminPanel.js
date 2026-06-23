@@ -14,6 +14,7 @@ import AdminContentManager from '@/AdminContentManager';
 import AdminAccessComplete from '@/AdminAccessComplete';
 import AdminPaymentConfig from '@/AdminPaymentConfig';
 import AdminPaymentHistory from '@/AdminPaymentHistory';
+import AdminEngagementTracking from '@/AdminEngagementTracking';
 import { initAdminAuth, isAdminAuthenticated } from '@/lib/adminAuth';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -404,7 +405,14 @@ const AdminPanel = () => {
         </div>
 
         {/* ==================== */}
-        {/* SECTION 6: CONTENU DE FORMATION */}
+        {/* SECTION 6: SUIVI DES ENGAGEMENTS */}
+        {/* ==================== */}
+        <div className="mb-8">
+          <AdminEngagementTracking />
+        </div>
+
+        {/* ==================== */}
+        {/* SECTION 7: CONTENU DE FORMATION */}
         {/* ==================== */}
         <div className="mb-8">
           <AdminContentManager />

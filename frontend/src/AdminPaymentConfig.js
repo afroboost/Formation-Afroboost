@@ -36,6 +36,8 @@ const AdminPaymentConfig = () => {
   const [enabledMethods, setEnabledMethods] = useState([]);
   const [instructions, setInstructions] = useState({});
   const [volunteerDesc, setVolunteerDesc] = useState('');
+  const [engagementMinEvents, setEngagementMinEvents] = useState(3);
+  const [engagementCharterText, setEngagementCharterText] = useState('');
   const [loading, setLoading] = useState(false);
 
   const loadConfig = async (levelId) => {
@@ -44,11 +46,13 @@ const AdminPaymentConfig = () => {
       const config = response.data;
       
       setPaymentMode(config.payment_mode || 'both');
-      setPrice(config.price || '');
+      setPrice(config.price != null ? config.price : 30);
       setCurrency(config.currency || 'CHF');
       setEnabledMethods(config.enabled_payment_methods || []);
       setInstructions(config.payment_instructions || {});
       setVolunteerDesc(config.volunteer_description || '');
+      setEngagementMinEvents(config.engagement_min_events != null ? config.engagement_min_events : 3);
+      setEngagementCharterText(config.engagement_charter_text || '');
     } catch (error) {
       console.error('Error loading config:', error);
     }
@@ -82,11 +86,13 @@ const AdminPaymentConfig = () => {
       await axios.post(`${API}/level-payment-config`, {
         level_id: selectedLevel.id,
         payment_mode: paymentMode,
-        price: price ? parseFloat(price) : null,
+        price: price ? parseFloat(price) : 30,
         currency: currency,
         enabled_payment_methods: enabledMethods,
         payment_instructions: instructions,
-        volunteer_description: volunteerDesc
+        volunteer_description: volunteerDesc,
+        engagement_min_events: engagementMinEvents ? parseInt(engagementMinEvents, 10) : 3,
+        engagement_charter_text: engagementCharterText
       });
       
       toast.success('Configuration sauvegardée!');
@@ -240,6 +246,34 @@ const AdminPaymentConfig = () => {
                     placeholder="Type de mission, durée indicative, etc."
                     className="input-dark min-h-[100px]"
                     data-testid="volunteer-desc-input"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-gray-300 mb-2 block">
+                    Nombre d&apos;événements requis (engagement)
+                  </Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={engagementMinEvents}
+                    onChange={(e) => setEngagementMinEvents(e.target.value)}
+                    placeholder="3"
+                    className="input-dark"
+                    data-testid="engagement-min-events-input"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-gray-300 mb-2 block">
+                    Texte de la charte d&apos;engagement
+                  </Label>
+                  <Textarea
+                    value={engagementCharterText}
+                    onChange={(e) => setEngagementCharterText(e.target.value)}
+                    placeholder="Texte de la charte que le participant devra accepter et signer."
+                    className="input-dark min-h-[100px]"
+                    data-testid="engagement-charter-text-input"
                   />
                 </div>
               </div>

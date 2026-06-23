@@ -19,6 +19,8 @@ import AdminLoginPage from '@/AdminLoginPage';
 import PaymentSuccessPage from '@/PaymentSuccessPage';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import AccessModeChoice from '@/pages/AccessModeChoice';
+import CharterAcceptance from '@/pages/CharterAcceptance';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -587,6 +589,8 @@ function App() {
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/levels" element={<LevelsPage />} />
           <Route path="/levels/:levelId" element={<LevelTrainingPage />} />
+          <Route path="/access-mode/:levelId" element={<AccessModeChoice />} />
+          <Route path="/charter/:levelId" element={<CharterAcceptance />} />
           <Route path="/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/exam" element={<ExamPage />} />
           <Route path="/results/:bookingId" element={<ResultsPage />} />

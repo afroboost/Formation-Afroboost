@@ -211,6 +211,8 @@ class LevelPaymentConfig(BaseModel):
     enabled_payment_methods: List[str] = []  # twint, stripe, orange_money, mtn_money
     payment_instructions: dict = {}  # {method: instruction_text}
     volunteer_description: str = ""
+    engagement_min_events: int = 3  # N evenements requis pour l'acces gratuit-engagement
+    engagement_charter_text: str = ""  # texte de la charte d'engagement
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class LevelPaymentConfigCreate(BaseModel):
@@ -221,6 +223,8 @@ class LevelPaymentConfigCreate(BaseModel):
     enabled_payment_methods: List[str] = []
     payment_instructions: dict = {}
     volunteer_description: str = ""
+    engagement_min_events: int = 3
+    engagement_charter_text: str = ""
 
 # =====================
 # USER ACCESS MODELS (COMPLETE MANAGEMENT)
@@ -1214,7 +1218,7 @@ async def request_level_access(input: LevelAccessRequest):
     
     return result
 
-@api_router.post("/level-access/validate")
+@api_router.post("/level-access/validate", dependencies=[Depends(require_admin)])
 async def validate_level_access(input: dict):
     """Admin validates payment or volunteer for level access"""
     user_id = input.get('user_id')
@@ -1876,15 +1880,16 @@ async def process_successful_stripe_payment(transaction: dict):
         }}
     )
     
-    # Create UserAccess with status "pending" (requires admin validation per user requirement)
+    # Create UserAccess ACTIVE immediately: le montant est verifie cote serveur
+    # (depuis level_payment_config), donc un paiement reussi donne acces a CE niveau.
     access_id = str(uuid.uuid4())
     access = {
         "id": access_id,
         "user_id": transaction["user_id"],
         "level_id": transaction["level_id"],
-        "status": "pending",  # IMPORTANT: Requires admin validation
+        "status": "active",  # paiement verifie => acces immediat
         "access_type": "payment",
-        "granted_at": None,  # Will be set when admin validates
+        "granted_at": now.isoformat(),
         "expires_at": None,
         "revoked_at": None,
         "revoked_by": None,
@@ -1902,20 +1907,19 @@ async def process_successful_stripe_payment(transaction: dict):
         {"$set": {"access_id": access_id}}
     )
     
-    # Update user_level_progress for backward compatibility
-    # Note: access_granted is FALSE because admin must validate
+    # Update user_level_progress: acces accorde immediatement (paiement verifie)
     await db.user_level_progress.update_one(
         {"user_id": transaction["user_id"], "level_id": transaction["level_id"]},
         {"$set": {
             "payment_status": "validated",
-            "access_granted": False,  # Admin must validate
-            "access_status": "pending_admin_validation",
+            "access_granted": True,
+            "access_status": "active",
             "updated_at": now.isoformat()
         }},
         upsert=True
     )
-    
-    logger.info(f"Stripe payment processed: transaction={transaction['id']}, access={access_id} (pending admin)")
+
+    logger.info(f"Stripe payment processed: transaction={transaction['id']}, access={access_id} (active)")
 
 
 @api_router.post("/webhook/stripe")
@@ -2129,11 +2133,13 @@ async def get_payment_config(level_id: str):
         return {
             "level_id": level_id,
             "payment_mode": "both",
-            "price": None,
+            "price": 30,
             "currency": "CHF",
-            "enabled_payment_methods": [],
+            "enabled_payment_methods": ["stripe", "twint"],
             "payment_instructions": {},
-            "volunteer_description": ""
+            "volunteer_description": "",
+            "engagement_min_events": 3,
+            "engagement_charter_text": ""
         }
     
     return config
@@ -2143,6 +2149,164 @@ async def get_all_payment_configs():
     """Get all payment configurations"""
     configs = await db.level_payment_config.find({}, {"_id": 0}).to_list(1000)
     return configs
+
+# =====================
+# ENGAGEMENT (acces gratuit avec engagement benevole) — Phase 1
+# =====================
+
+# Rate limiting simple en memoire (anti-abus des endpoints publics sensibles)
+_rate_buckets: dict = {}
+def rate_limit(request: Request, key: str, limit: int, window: int = 60):
+    import time as _t
+    ip = (request.client.host if request.client else "unknown")
+    now = _t.time()
+    bk = f"{key}:{ip}"
+    hits = [t for t in _rate_buckets.get(bk, []) if now - t < window]
+    if len(hits) >= limit:
+        raise HTTPException(status_code=429, detail="Trop de requetes, reessayez dans un instant")
+    hits.append(now)
+    _rate_buckets[bk] = hits
+
+ENGAGEMENT_EVENT_TYPES = [
+    "montage", "demontage", "nettoyage", "rangement",
+    "distribution_flyers", "publications_reseaux", "remplacement_formateur",
+]
+
+class EngagementCharterCreate(BaseModel):
+    user_id: str
+    user_name: str = ""
+    level_id: str
+    signature_name: str
+    checkbox_accepted: bool
+
+@api_router.post("/engagement/charter")
+async def submit_engagement_charter(input: EngagementCharterCreate, request: Request):
+    """Le participant soumet la charte d'engagement (case cochee + signature + horodatage)."""
+    rate_limit(request, "charter", limit=5, window=300)
+    if not input.checkbox_accepted:
+        raise HTTPException(status_code=400, detail="Vous devez accepter la charte d'engagement")
+    if not (input.signature_name or "").strip():
+        raise HTTPException(status_code=400, detail="La signature (nom) est requise")
+    if not (input.user_id or "").strip():
+        raise HTTPException(status_code=400, detail="Identifiant participant manquant")
+
+    config = await db.level_payment_config.find_one({"level_id": input.level_id}, {"_id": 0}) or {}
+    n_events = int(config.get("engagement_min_events", 3) or 3)
+    charter_text = config.get("engagement_charter_text", "")
+    now = datetime.now(timezone.utc)
+
+    existing = await db.engagement_charters.find_one(
+        {"user_id": input.user_id, "level_id": input.level_id, "status": {"$in": ["pending", "validated"]}},
+        {"_id": 0},
+    )
+    if existing:
+        return {"success": True, "already": True, "charter": existing}
+
+    charter = {
+        "id": str(uuid.uuid4()),
+        "user_id": input.user_id.strip(),
+        "user_name": (input.user_name or "").strip(),
+        "level_id": input.level_id,
+        "events_promised": n_events,
+        "charter_text": charter_text,
+        "checkbox_accepted": True,
+        "signature_name": input.signature_name.strip(),
+        "accepted_at": now.isoformat(),
+        "status": "pending",
+        "events_done": [],
+        "validated_at": None,
+        "validated_by": None,
+        "revoked_at": None,
+        "revoke_reason": None,
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+    }
+    await db.engagement_charters.insert_one(charter)
+    await db.user_level_progress.update_one(
+        {"user_id": input.user_id, "level_id": input.level_id},
+        {"$set": {"volunteer_status": "pending", "updated_at": now.isoformat()}},
+        upsert=True,
+    )
+    charter.pop("_id", None)
+    return {"success": True, "charter": charter}
+
+@api_router.get("/engagement/me/{user_id}")
+async def my_engagement(user_id: str):
+    return await db.engagement_charters.find({"user_id": user_id}, {"_id": 0}).to_list(100)
+
+@api_router.get("/engagement/admin/all", dependencies=[Depends(require_admin)])
+async def all_engagements():
+    return await db.engagement_charters.find({}, {"_id": 0}).sort("created_at", -1).to_list(2000)
+
+@api_router.post("/engagement/{charter_id}/validate")
+async def validate_engagement(charter_id: str, admin=Depends(require_admin)):
+    """Admin valide la charte -> octroie un acces 'volunteer' actif au niveau."""
+    charter = await db.engagement_charters.find_one({"id": charter_id})
+    if not charter:
+        raise HTTPException(status_code=404, detail="Charte introuvable")
+    now = datetime.now(timezone.utc)
+    await db.engagement_charters.update_one(
+        {"id": charter_id},
+        {"$set": {"status": "validated", "validated_at": now.isoformat(),
+                  "validated_by": admin.get("sub"), "updated_at": now.isoformat()}},
+    )
+    existing = await db.user_access.find_one(
+        {"user_id": charter["user_id"], "level_id": charter["level_id"], "status": "active"})
+    if not existing:
+        await db.user_access.insert_one({
+            "id": str(uuid.uuid4()), "user_id": charter["user_id"], "level_id": charter["level_id"],
+            "status": "active", "access_type": "volunteer", "granted_at": now.isoformat(),
+            "expires_at": None, "revoked_at": None, "revoked_by": None, "revoke_reason": None,
+            "payment_id": None, "created_at": now.isoformat(), "updated_at": now.isoformat(),
+        })
+    await db.user_level_progress.update_one(
+        {"user_id": charter["user_id"], "level_id": charter["level_id"]},
+        {"$set": {"volunteer_status": "validated", "access_granted": True,
+                  "access_status": "active", "updated_at": now.isoformat()}},
+        upsert=True,
+    )
+    return {"success": True, "message": "Engagement valide, acces accorde"}
+
+@api_router.post("/engagement/{charter_id}/mark-event")
+async def mark_engagement_event(charter_id: str, input: dict, admin=Depends(require_admin)):
+    """Admin marque un evenement realise par le participant."""
+    ev_type = (input.get("type") or "").strip()
+    if ev_type not in ENGAGEMENT_EVENT_TYPES:
+        raise HTTPException(status_code=400, detail="Type d'evenement invalide")
+    charter = await db.engagement_charters.find_one({"id": charter_id})
+    if not charter:
+        raise HTTPException(status_code=404, detail="Charte introuvable")
+    now = datetime.now(timezone.utc)
+    event = {"type": ev_type, "date": input.get("date") or now.isoformat(), "marked_by": admin.get("sub")}
+    await db.engagement_charters.update_one(
+        {"id": charter_id},
+        {"$push": {"events_done": event}, "$set": {"updated_at": now.isoformat()}},
+    )
+    return {"success": True, "charter": await db.engagement_charters.find_one({"id": charter_id}, {"_id": 0})}
+
+@api_router.post("/engagement/{charter_id}/revoke")
+async def revoke_engagement(charter_id: str, input: dict = None, admin=Depends(require_admin)):
+    charter = await db.engagement_charters.find_one({"id": charter_id})
+    if not charter:
+        raise HTTPException(status_code=404, detail="Charte introuvable")
+    now = datetime.now(timezone.utc)
+    reason = (input or {}).get("reason", "")
+    await db.engagement_charters.update_one(
+        {"id": charter_id},
+        {"$set": {"status": "revoked", "revoked_at": now.isoformat(),
+                  "revoke_reason": reason, "updated_at": now.isoformat()}},
+    )
+    await db.user_access.update_many(
+        {"user_id": charter["user_id"], "level_id": charter["level_id"],
+         "access_type": "volunteer", "status": "active"},
+        {"$set": {"status": "revoked", "revoked_at": now.isoformat(),
+                  "revoke_reason": reason, "updated_at": now.isoformat()}},
+    )
+    await db.user_level_progress.update_one(
+        {"user_id": charter["user_id"], "level_id": charter["level_id"]},
+        {"$set": {"volunteer_status": "rejected", "access_granted": False, "updated_at": now.isoformat()}},
+    )
+    return {"success": True}
 
 # Include the router in the main app
 app.include_router(api_router)

@@ -6,7 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { PlayCircle, FileText, Video, CheckCircle, Lock, Calendar, Users, ArrowLeft } from 'lucide-react';
+import { PlayCircle, FileText, Video, CheckCircle, Lock, Calendar, Users, ArrowLeft, Image } from 'lucide-react';
+import AfricaStylesMap from '@/components/visuals/AfricaStylesMap';
+import AnatomyDiagram from '@/components/visuals/AnatomyDiagram';
+import StyleGallery from '@/components/visuals/StyleGallery';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -297,6 +300,35 @@ const LevelTrainingPage = () => {
         )}
 
         {activeTab === 'text' && (
+          <>
+          {(content?.diagram_url || content?.images?.length > 0 || levelId === 'level-1' || levelId === 'level-2') && (
+            <Card className="card-dark border-neon mb-8" data-testid="visual-content">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2"><Image size={20} /> Visuel</CardTitle>
+                <CardDescription className="text-gray-400">
+                  {levelId === 'level-1' ? "Carte des origines et galerie des 6 styles"
+                    : levelId === 'level-2' ? "Repères anatomiques des muscles sollicités"
+                    : "Illustration du niveau"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {content?.diagram_url ? (
+                  <img src={content.diagram_url} alt="Visuel du niveau" className="w-full rounded-xl" loading="lazy" />
+                ) : levelId === 'level-1' ? (
+                  <AfricaStylesMap />
+                ) : levelId === 'level-2' ? (
+                  <AnatomyDiagram />
+                ) : null}
+                {content?.images?.length > 0 && (
+                  <div className="mt-8">
+                    <h4 className="text-white font-semibold mb-3">Les 6 styles en images</h4>
+                    <StyleGallery images={content.images} />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="card-dark border-neon" data-testid="text-content">
             <CardHeader>
               <CardTitle className="text-white">Cours écrit</CardTitle>
@@ -337,6 +369,7 @@ const LevelTrainingPage = () => {
               )}
             </CardContent>
           </Card>
+          </>
         )}
 
         {activeTab === 'live' && (

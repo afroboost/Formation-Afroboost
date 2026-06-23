@@ -27,6 +27,8 @@ const AdminContentManager = () => {
   const [textContent, setTextContent] = useState('');
   const [liveRequired, setLiveRequired] = useState(false);
   const [liveSessions, setLiveSessions] = useState([]);
+  const [diagramUrl, setDiagramUrl] = useState('');
+  const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const loadLevelContent = async (levelId) => {
@@ -39,6 +41,8 @@ const AdminContentManager = () => {
       setTextContent(data.text_content || '');
       setLiveRequired(data.live_required || false);
       setLiveSessions(data.live_sessions || []);
+      setDiagramUrl(data.diagram_url || '');
+      setImages(data.images || []);
     } catch (error) {
       console.error('Error loading content:', error);
     }
@@ -84,6 +88,14 @@ const AdminContentManager = () => {
     setLiveSessions(liveSessions.filter((_, i) => i !== index));
   };
 
+  const addImage = () => setImages([...images, { url: '', caption: '', credit: '' }]);
+  const updateImage = (index, field, value) => {
+    const updated = [...images];
+    updated[index][field] = value;
+    setImages(updated);
+  };
+  const removeImage = (index) => setImages(images.filter((_, i) => i !== index));
+
   const handleSave = async () => {
     if (!selectedLevel) return;
 
@@ -95,7 +107,9 @@ const AdminContentManager = () => {
         videos,
         text_content: textContent,
         live_required: liveRequired,
-        live_sessions: liveSessions
+        live_sessions: liveSessions,
+        diagram_url: diagramUrl,
+        images
       });
       toast.success('Contenu sauvegardé!');
     } catch (error) {
@@ -188,6 +202,48 @@ const AdminContentManager = () => {
                   className="input-dark min-h-[200px]"
                   data-testid="text-content-input"
                 />
+              </div>
+
+              {/* Visuels (remplaçables) */}
+              <div>
+                <Label className="text-gray-300 text-lg mb-2 block">Visuels</Label>
+                <div className="mb-4">
+                  <Label className="text-gray-400 text-sm mb-1 block">
+                    Image / diagramme (URL) — remplace le visuel intégré (carte, anatomie). Laisser vide pour garder le visuel d'origine.
+                  </Label>
+                  <Input
+                    placeholder="https://…"
+                    value={diagramUrl}
+                    onChange={(e) => setDiagramUrl(e.target.value)}
+                    className="input-dark"
+                  />
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-gray-400 text-sm">Galerie d'images</Label>
+                  <Button onClick={addImage} size="sm" className="btn-neon">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Ajouter image
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  {images.map((img, index) => (
+                    <div key={index} className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <div className="grid md:grid-cols-3 gap-2">
+                        <Input placeholder="URL image" value={img.url || ''}
+                          onChange={(e) => updateImage(index, 'url', e.target.value)} className="input-dark" />
+                        <Input placeholder="Légende (nom du style…)" value={img.caption || ''}
+                          onChange={(e) => updateImage(index, 'caption', e.target.value)} className="input-dark" />
+                        <div className="flex gap-2">
+                          <Input placeholder="Crédit / licence" value={img.credit || ''}
+                            onChange={(e) => updateImage(index, 'credit', e.target.value)} className="input-dark" />
+                          <Button onClick={() => removeImage(index)} variant="destructive" size="sm">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Live Sessions */}

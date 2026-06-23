@@ -155,6 +155,8 @@ class LevelContent(BaseModel):
     text_content: str = ""
     live_required: bool = False
     live_sessions: List[LiveSession] = []
+    diagram_url: str = ""  # remplace le visuel integre (carte/anatomie) si renseigne
+    images: List[dict] = []  # galerie [{url, caption, credit}] editable en admin
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class LevelContentCreate(BaseModel):
@@ -164,6 +166,8 @@ class LevelContentCreate(BaseModel):
     text_content: str = ""
     live_required: bool = False
     live_sessions: List[LiveSession] = []
+    diagram_url: str = ""
+    images: List[dict] = []
 
 class UserLevelProgress(BaseModel):
     model_config = ConfigDict(extra="ignore")

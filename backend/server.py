@@ -1035,7 +1035,10 @@ def _public_content(content):
     return c
 
 @api_router.get("/level-content/{level_id}")
-async def get_level_content(level_id: str):
+async def get_level_content(level_id: str, response: Response):
+    # Contenu editable par l'admin (modes d'onglets, etc.) : pas de cache navigateur
+    # pour que tout changement (ex. masquage d'un mode) soit vu immediatement.
+    response.headers["Cache-Control"] = "no-store, must-revalidate"
     content = await db.level_content.find_one({"level_id": level_id}, {"_id": 0})
     if not content:
         return {

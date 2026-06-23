@@ -416,13 +416,54 @@ def verify_firebase_session_cookie(cookie: str) -> dict:
     )
 
 
+def _supabase_ref() -> str:
+    """Ref du projet Supabase (ex. resdgtizfiyfgdhsffuz) depuis SUPABASE_ISSUER."""
+    import re as _re
+    m = _re.search(r"https?://([a-z0-9]+)\.supabase\.co", os.environ.get("SUPABASE_ISSUER", ""))
+    return m.group(1) if m else ""
+
+
+def supabase_access_token_from_cookies(cookies: dict) -> Optional[str]:
+    """Reconstruit l'access_token Supabase depuis le cookie `sb-<ref>-auth-token`
+    (cookie de session partage .afroboosteur.com), y compris s'il est decoupe en .0/.1."""
+    ref = _supabase_ref()
+    if not ref:
+        return None
+    base = f"sb-{ref}-auth-token"
+    parts = []
+    if base in cookies:
+        parts.append(cookies[base])
+    i = 0
+    while f"{base}.{i}" in cookies:
+        parts.append(cookies[f"{base}.{i}"])
+        i += 1
+    if not parts:
+        return None
+    raw = "".join(parts)
+    try:
+        if raw.startswith("base64-"):
+            import base64, json
+            data = json.loads(base64.b64decode(raw[len("base64-"):] + "==="))
+        else:
+            import json, urllib.parse
+            data = json.loads(urllib.parse.unquote(raw))
+    except Exception:
+        return None
+    if isinstance(data, dict):
+        return data.get("access_token")
+    if isinstance(data, list) and data:
+        return data[0]
+    return None
+
+
 async def require_admin(
+    request: Request,
     authorization: Optional[str] = Header(None),
     x_admin_secret: Optional[str] = Header(None),
     fb_session: Optional[str] = Cookie(None),
 ):
-    """Autorise si secret legacy, ID token Firebase, JWT Supabase, OU cookie de
-    session Firebase partage (.afroboosteur.com), dont l'email est dans ADMIN_EMAILS."""
+    """Autorise si secret legacy, ID token Firebase, JWT Supabase (Bearer OU cookie
+    partage .afroboosteur.com), ou cookie de session Firebase, email dans ADMIN_EMAILS."""
     # (a) Secret legacy — en-tete X-Admin-Secret
     if x_admin_secret and x_admin_secret == ADMIN_SECRET_ID:
         return {"method": "secret", "sub": "legacy-admin"}
@@ -436,12 +477,20 @@ async def require_admin(
                 break
             except Exception:
                 continue
-    # (d) Cookie de session Firebase partage (SSO)
+    # (d) Cookie de session Firebase partage (SSO Firebase)
     if candidate is None and fb_session:
         try:
             candidate = ("session-cookie", verify_firebase_session_cookie(fb_session))
         except Exception:
             candidate = None
+    # (e) Cookie Supabase partage (SSO Supabase .afroboosteur.com)
+    if candidate is None:
+        sb_token = supabase_access_token_from_cookies(request.cookies)
+        if sb_token:
+            try:
+                candidate = ("supabase-cookie", verify_supabase_jwt(sb_token))
+            except Exception:
+                candidate = None
     if candidate is None:
         raise HTTPException(status_code=401, detail="Authentification administrateur requise")
     method, payload = candidate
@@ -453,13 +502,14 @@ async def require_admin(
 
 @api_router.get("/auth/me")
 async def auth_me(
+    request: Request,
     authorization: Optional[str] = Header(None),
     x_admin_secret: Optional[str] = Header(None),
     fb_session: Optional[str] = Cookie(None),
 ):
     """Etat d'authentification admin (utilise par le frontend pour le SSO)."""
     try:
-        info = await require_admin(authorization, x_admin_secret, fb_session)
+        info = await require_admin(request, authorization, x_admin_secret, fb_session)
         return {"authenticated": True, "admin": True, "email": info.get("sub"), "method": info.get("method")}
     except HTTPException:
         return {"authenticated": False, "admin": False}

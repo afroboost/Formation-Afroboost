@@ -159,6 +159,7 @@ class LevelContent(BaseModel):
     images: List[dict] = []  # galerie [{url, caption, credit}] editable en admin
     youtube_url: str = ""  # video principale du niveau (lien YouTube)
     map_markers: List[dict] = []  # carte interactive [{id,country,x,y,style_name,youtube_url,history}]
+    muscle_markers: List[dict] = []  # anatomie [{id,name,description,youtube_url,x,y,view:'anterior'|'posterior'}]
     quiz: dict = {}  # {pass_score:int, questions:[{id,q,options:[str],correct_index:int}]}
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -173,6 +174,7 @@ class LevelContentCreate(BaseModel):
     images: List[dict] = []
     youtube_url: str = ""
     map_markers: List[dict] = []
+    muscle_markers: List[dict] = []
     quiz: dict = {}
 
 class UserLevelProgress(BaseModel):

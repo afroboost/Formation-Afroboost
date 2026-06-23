@@ -12,6 +12,7 @@ import AnatomyDiagram from '@/components/visuals/AnatomyDiagram';
 import StyleGallery from '@/components/visuals/StyleGallery';
 import YouTubeMedia from '@/components/visuals/YouTubeMedia';
 import InteractiveStyleMap from '@/components/visuals/InteractiveStyleMap';
+import InteractiveMuscleMap from '@/components/visuals/InteractiveMuscleMap';
 import LevelQuiz from '@/components/visuals/LevelQuiz';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -304,7 +305,7 @@ const LevelTrainingPage = () => {
 
         {activeTab === 'text' && (
           <>
-          {(content?.youtube_url || content?.diagram_url || content?.map_markers?.length > 0 || content?.images?.length > 0 || levelId === 'level-1' || levelId === 'level-2') && (
+          {(content?.youtube_url || content?.diagram_url || content?.map_markers?.length > 0 || content?.muscle_markers?.length > 0 || content?.images?.length > 0 || levelId === 'level-1' || levelId === 'level-2') && (
             <Card className="card-dark border-neon mb-8" data-testid="visual-content">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2"><Image size={20} /> Média / Visuel</CardTitle>
@@ -317,6 +318,8 @@ const LevelTrainingPage = () => {
               <CardContent>
                 {(levelId === 'level-1' && content?.map_markers?.length > 0) ? (
                   <InteractiveStyleMap markers={content.map_markers} />
+                ) : (levelId === 'level-2' && content?.muscle_markers?.length > 0) ? (
+                  <InteractiveMuscleMap markers={content.muscle_markers} />
                 ) : content?.youtube_url ? (
                   <YouTubeMedia url={content.youtube_url} title={content?.level_name} />
                 ) : content?.diagram_url ? (

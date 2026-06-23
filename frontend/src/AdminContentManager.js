@@ -31,6 +31,7 @@ const AdminContentManager = () => {
   const [images, setImages] = useState([]);
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [mapMarkers, setMapMarkers] = useState([]);
+  const [muscleMarkers, setMuscleMarkers] = useState([]);
   const [quiz, setQuiz] = useState({ pass_score: 80, questions: [] });
   const [loading, setLoading] = useState(false);
 
@@ -48,6 +49,7 @@ const AdminContentManager = () => {
       setImages(data.images || []);
       setYoutubeUrl(data.youtube_url || '');
       setMapMarkers(data.map_markers || []);
+      setMuscleMarkers(data.muscle_markers || []);
       setQuiz(data.quiz && data.quiz.questions ? data.quiz : { pass_score: 80, questions: [] });
     } catch (error) {
       console.error('Error loading content:', error);
@@ -110,6 +112,15 @@ const AdminContentManager = () => {
     setMapMarkers(updated);
   };
   const removeMarker = (index) => setMapMarkers(mapMarkers.filter((_, i) => i !== index));
+
+  // Muscle markers helpers (Niveau 2 anatomie)
+  const addMuscle = () => setMuscleMarkers([...muscleMarkers, { id: `mu-${Date.now()}`, name: '', description: '', youtube_url: '', x: 50, y: 50, view: 'anterior' }]);
+  const updateMuscle = (index, field, value) => {
+    const updated = [...muscleMarkers];
+    updated[index] = { ...updated[index], [field]: value };
+    setMuscleMarkers(updated);
+  };
+  const removeMuscle = (index) => setMuscleMarkers(muscleMarkers.filter((_, i) => i !== index));
 
   // Quiz helpers (immutable)
   const updateQuizField = (field, value) => {
@@ -181,6 +192,7 @@ const AdminContentManager = () => {
         images,
         youtube_url: youtubeUrl,
         map_markers: mapMarkers,
+        muscle_markers: muscleMarkers,
         quiz
       });
       toast.success('Contenu sauvegardé!');
@@ -396,6 +408,51 @@ const AdminContentManager = () => {
                           className="input-dark flex-1"
                         />
                         <Button onClick={() => removeMarker(index)} variant="destructive" size="sm">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Muscles (Niveau 2 anatomie interactive) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-gray-300 text-lg">Muscles (anatomie interactive)</Label>
+                  <Button onClick={addMuscle} size="sm" className="btn-neon" data-testid="add-muscle">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Ajouter un muscle
+                  </Button>
+                </div>
+                <Label className="text-gray-400 text-sm mb-3 block">
+                  Surtout pour le Niveau 2. La position X/Y est en % de l'illustration de la vue choisie.
+                </Label>
+                <div className="space-y-3">
+                  {muscleMarkers.map((m, index) => (
+                    <div key={index} className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <div className="grid md:grid-cols-2 gap-2 mb-2">
+                        <Input placeholder="Nom du muscle" value={m.name || ''}
+                          onChange={(e) => updateMuscle(index, 'name', e.target.value)} className="input-dark" />
+                        <select value={m.view || 'anterior'}
+                          onChange={(e) => updateMuscle(index, 'view', e.target.value)}
+                          className="input-dark rounded-md px-3 py-2">
+                          <option value="anterior">Vue antérieure (avant)</option>
+                          <option value="posterior">Vue postérieure (arrière)</option>
+                        </select>
+                      </div>
+                      <Textarea placeholder="Description (rôle au quotidien + exemples)" value={m.description || ''}
+                        onChange={(e) => updateMuscle(index, 'description', e.target.value)} className="input-dark mb-2" />
+                      <div className="grid md:grid-cols-3 gap-2 mb-2">
+                        <Input type="number" min="0" max="100" placeholder="Position X %" value={m.x}
+                          onChange={(e) => updateMuscle(index, 'x', parseFloat(e.target.value))} className="input-dark" />
+                        <Input type="number" min="0" max="100" placeholder="Position Y %" value={m.y}
+                          onChange={(e) => updateMuscle(index, 'y', parseFloat(e.target.value))} className="input-dark" />
+                        <Input placeholder="Lien vidéo YouTube" value={m.youtube_url || ''}
+                          onChange={(e) => updateMuscle(index, 'youtube_url', e.target.value)} className="input-dark" />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button onClick={() => removeMuscle(index)} variant="destructive" size="sm">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

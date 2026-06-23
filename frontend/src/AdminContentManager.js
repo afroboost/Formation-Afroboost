@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save, Info } from 'lucide-react';
+import { Plus, Trash2, Save, CheckCircle } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -37,6 +37,7 @@ const AdminContentManager = () => {
   const [topicVideos, setTopicVideos] = useState([]);
   const [help, setHelp] = useState({ enabled: false, title: '', booking_url: '', allow_request: true });
   const [contentModes, setContentModes] = useState({ videos: true, text: true, live: true });
+  const [modesSaving, setModesSaving] = useState(false);
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -225,8 +226,26 @@ const AdminContentManager = () => {
   // Bouton d'aide helper (immutable)
   const setHelpField = (field, value) => setHelp((h) => ({ ...h, [field]: value }));
 
-  // Content modes helper (immutable)
-  const setMode = (key, checked) => setContentModes((m) => ({ ...m, [key]: !!checked }));
+  // Content modes : AUTO-SAVE dedie (sauvegarde immediate et sans ambiguite).
+  // Le reglage des modes est enregistre des le toggle, independamment du gros
+  // bouton "Sauvegarder le contenu". L'intention de l'admin est toujours appliquee.
+  const setMode = async (key, checked) => {
+    if (!selectedLevel) return;
+    const prev = contentModes;
+    const next = { ...contentModes, [key]: !!checked };
+    setContentModes(next);
+    setModesSaving(true);
+    try {
+      const res = await axios.post(`${API}/admin/level-content/${selectedLevel.id}/modes`, { content_modes: next });
+      if (res.data?.content_modes) setContentModes(res.data.content_modes);
+      toast.success('Modes enregistrés');
+    } catch (e) {
+      setContentModes(prev);
+      toast.error("Échec de l'enregistrement des modes");
+    } finally {
+      setModesSaving(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!selectedLevel) return;
@@ -297,7 +316,7 @@ const AdminContentManager = () => {
                   Modes de contenu visibles par le participant
                 </Label>
                 <Label className="text-gray-400 text-sm mb-3 block">
-                  Les onglets décochés sont MASQUÉS pour le participant (pas seulement grisés).
+                  Seuls les onglets cochés apparaissent côté participant ; les autres sont MASQUÉS.
                 </Label>
                 <div className="flex flex-wrap gap-6">
                   <div className="flex items-center gap-2">
@@ -331,11 +350,20 @@ const AdminContentManager = () => {
                     </Label>
                   </div>
                 </div>
-                <div className="mt-3 flex items-start gap-2 p-3 bg-amber-500/10 rounded-lg border border-amber-500/40">
-                  <Info className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
-                  <p className="text-amber-200 text-sm">
-                    Après avoir modifié les modes, cliquez « Sauvegarder le contenu » en bas de cette section pour appliquer (le bouton « Sauvegarder la configuration » concerne uniquement le paiement).
-                  </p>
+                <div className="mt-3 flex items-center gap-2 p-3 bg-green-500/10 rounded-lg border border-green-500/40">
+                  {modesSaving ? (
+                    <>
+                      <span className="spinner w-4 h-4"></span>
+                      <p className="text-green-200 text-sm">Enregistrement des modes…</p>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                      <p className="text-green-200 text-sm">
+                        Enregistrement automatique : chaque changement est appliqué immédiatement côté participant (pas besoin d'un autre bouton).
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
 

@@ -1056,6 +1056,22 @@ async def get_level_content_admin(level_id: str):
     content = await db.level_content.find_one({"level_id": level_id}, {"_id": 0})
     return content or {"level_id": level_id}
 
+class ContentModesUpdate(BaseModel):
+    content_modes: dict = {}
+
+@api_router.post("/admin/level-content/{level_id}/modes", dependencies=[Depends(require_admin)])
+async def update_content_modes(level_id: str, input: ContentModesUpdate):
+    """Sauvegarde DEDIEE des modes d'onglets (videos/text/live), normalises en
+    booleens stricts. Sauvegarde fiable et sans ambiguite (auto-save cote admin)."""
+    cm = input.content_modes or {}
+    modes = {k: (cm.get(k) is True) for k in ("videos", "text", "live")}
+    await db.level_content.update_one(
+        {"level_id": level_id},
+        {"$set": {"content_modes": modes, "level_id": level_id}},
+        upsert=True,
+    )
+    return {"success": True, "content_modes": modes}
+
 # ---- QUIZ : test de reussite par niveau (correction cote serveur) ----
 def _next_level_id(level_id):
     import re

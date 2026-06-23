@@ -45,19 +45,19 @@ const LevelTrainingPage = () => {
     }
   }, [levelId]);
 
-  // Modes de contenu actives par l'admin (onglets visibles par le participant)
-  const modeOn = (m) => {
-    const cm = content?.content_modes || {};
-    return Object.keys(cm).length ? cm[m] !== false : true;
-  };
+  // Modes de contenu : STRICT — un onglet n'apparait QUE si content_modes[m] === true.
+  // Aucun fallback "tout afficher" si content_modes est absent/incomplet.
+  // Anti-page-vide : si aucun mode actif, on affiche au moins "Cours ecrit" (text).
+  const enabledTabs = ['videos', 'text', 'live'].filter((m) => content?.content_modes?.[m] === true);
+  const visibleTabs = enabledTabs.length > 0 ? enabledTabs : ['text'];
+  const tabVisible = (m) => visibleTabs.includes(m);
 
-  // Onglet actif = premier mode active (bascule si l'onglet courant est masque)
+  // Onglet actif = premier mode visible (bascule si l'onglet courant est masque)
   useEffect(() => {
     if (!content) return;
-    const cm = content.content_modes || {};
-    const has = Object.keys(cm).length > 0;
-    const enabled = ['videos', 'text', 'live'].filter((m) => (has ? cm[m] !== false : true));
-    if (enabled.length && !enabled.includes(activeTab)) setActiveTab(enabled[0]);
+    const enabled = ['videos', 'text', 'live'].filter((m) => content?.content_modes?.[m] === true);
+    const visible = enabled.length > 0 ? enabled : ['text'];
+    if (!visible.includes(activeTab)) setActiveTab(visible[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content]);
 
@@ -178,7 +178,7 @@ const LevelTrainingPage = () => {
 
         {/* Tabs */}
         <div className="flex gap-4 mb-8 flex-wrap">
-          {modeOn('videos') && (
+          {tabVisible('videos') && (
             <button
               onClick={() => setActiveTab('videos')}
               className={`px-6 py-3 rounded-lg font-semibold transition-all ${
@@ -193,7 +193,7 @@ const LevelTrainingPage = () => {
             </button>
           )}
 
-          {modeOn('text') && (
+          {tabVisible('text') && (
             <button
               onClick={() => setActiveTab('text')}
               className={`px-6 py-3 rounded-lg font-semibold transition-all ${
@@ -208,7 +208,7 @@ const LevelTrainingPage = () => {
             </button>
           )}
 
-          {modeOn('live') && (
+          {tabVisible('live') && (
             <button
               onClick={() => setActiveTab('live')}
               className={`px-6 py-3 rounded-lg font-semibold transition-all ${

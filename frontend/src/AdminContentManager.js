@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +38,10 @@ const AdminContentManager = () => {
   const [help, setHelp] = useState({ enabled: false, title: '', booking_url: '', allow_request: true });
   const [contentModes, setContentModes] = useState({ videos: true, text: true, live: true });
   const [modesSaving, setModesSaving] = useState(false);
+  const modesRef = useRef({ videos: true, text: true, live: true });
+  const modesTimer = useRef(null);
+  // Garde modesRef synchronise avec l'etat affiche (chargement d'un niveau + toggles).
+  useEffect(() => { modesRef.current = contentModes; }, [contentModes]);
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -226,25 +230,29 @@ const AdminContentManager = () => {
   // Bouton d'aide helper (immutable)
   const setHelpField = (field, value) => setHelp((h) => ({ ...h, [field]: value }));
 
-  // Content modes : AUTO-SAVE dedie (sauvegarde immediate et sans ambiguite).
-  // Le reglage des modes est enregistre des le toggle, independamment du gros
-  // bouton "Sauvegarder le contenu". L'intention de l'admin est toujours appliquee.
-  const setMode = async (key, checked) => {
-    if (!selectedLevel) return;
-    const prev = contentModes;
-    const next = { ...contentModes, [key]: !!checked };
-    setContentModes(next);
+  // Content modes : AUTO-SAVE dedie, robuste aux clics rapides.
+  // modesRef garde l'etat le PLUS RECENT (synchronisation immediate, pas de closure
+  // perimee), et un debounce envoie UN SEUL POST cumulatif vers l'endpoint dedie.
+  const persistModes = async (modes, levelId) => {
+    if (!levelId) return;
     setModesSaving(true);
     try {
-      const res = await axios.post(`${API}/admin/level-content/${selectedLevel.id}/modes`, { content_modes: next });
-      if (res.data?.content_modes) setContentModes(res.data.content_modes);
+      await axios.post(`${API}/admin/level-content/${levelId}/modes`, { content_modes: modes });
       toast.success('Modes enregistrés');
     } catch (e) {
-      setContentModes(prev);
       toast.error("Échec de l'enregistrement des modes");
     } finally {
       setModesSaving(false);
     }
+  };
+  const setMode = (key, checked) => {
+    if (!selectedLevel) return;
+    const next = { ...modesRef.current, [key]: !!checked };
+    modesRef.current = next;
+    setContentModes(next);
+    const levelId = selectedLevel.id;
+    if (modesTimer.current) clearTimeout(modesTimer.current);
+    modesTimer.current = setTimeout(() => persistModes(next, levelId), 350);
   };
 
   const handleSave = async () => {

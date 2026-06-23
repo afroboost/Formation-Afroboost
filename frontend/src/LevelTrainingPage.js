@@ -42,6 +42,22 @@ const LevelTrainingPage = () => {
     }
   }, [levelId]);
 
+  // Modes de contenu actives par l'admin (onglets visibles par le participant)
+  const modeOn = (m) => {
+    const cm = content?.content_modes || {};
+    return Object.keys(cm).length ? cm[m] !== false : true;
+  };
+
+  // Onglet actif = premier mode active (bascule si l'onglet courant est masque)
+  useEffect(() => {
+    if (!content) return;
+    const cm = content.content_modes || {};
+    const has = Object.keys(cm).length > 0;
+    const enabled = ['videos', 'text', 'live'].filter((m) => (has ? cm[m] !== false : true));
+    if (enabled.length && !enabled.includes(activeTab)) setActiveTab(enabled[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content]);
+
   const fetchData = async (uid) => {
     try {
       const [contentRes, progressRes] = await Promise.all([
@@ -159,44 +175,50 @@ const LevelTrainingPage = () => {
 
         {/* Tabs */}
         <div className="flex gap-4 mb-8 flex-wrap">
-          <button
-            onClick={() => setActiveTab('videos')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              activeTab === 'videos'
-                ? 'bg-purple-500 text-white'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-            data-testid="tab-videos"
-          >
-            <PlayCircle className="w-5 h-5 inline mr-2" />
-            Vidéos ({videosCompleted}/{totalVideos})
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('text')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              activeTab === 'text'
-                ? 'bg-purple-500 text-white'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-            data-testid="tab-text"
-          >
-            <FileText className="w-5 h-5 inline mr-2" />
-            Cours écrit {textConfirmed && '✓'}
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('live')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              activeTab === 'live'
-                ? 'bg-purple-500 text-white'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-            data-testid="tab-live"
-          >
-            <Video className="w-5 h-5 inline mr-2" />
-            Live {liveRequired && '*'} {liveAttended && '✓'}
-          </button>
+          {modeOn('videos') && (
+            <button
+              onClick={() => setActiveTab('videos')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                activeTab === 'videos'
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+              data-testid="tab-videos"
+            >
+              <PlayCircle className="w-5 h-5 inline mr-2" />
+              Vidéos ({videosCompleted}/{totalVideos})
+            </button>
+          )}
+
+          {modeOn('text') && (
+            <button
+              onClick={() => setActiveTab('text')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                activeTab === 'text'
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+              data-testid="tab-text"
+            >
+              <FileText className="w-5 h-5 inline mr-2" />
+              Cours écrit {textConfirmed && '✓'}
+            </button>
+          )}
+
+          {modeOn('live') && (
+            <button
+              onClick={() => setActiveTab('live')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                activeTab === 'live'
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+              data-testid="tab-live"
+            >
+              <Video className="w-5 h-5 inline mr-2" />
+              Live {liveRequired && '*'} {liveAttended && '✓'}
+            </button>
+          )}
         </div>
 
         {/* Progress Overview */}

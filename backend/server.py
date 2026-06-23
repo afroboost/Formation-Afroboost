@@ -160,6 +160,7 @@ class LevelContent(BaseModel):
     youtube_url: str = ""  # video principale du niveau (lien YouTube)
     map_markers: List[dict] = []  # carte interactive [{id,country,x,y,style_name,youtube_url,history}]
     muscle_markers: List[dict] = []  # anatomie [{id,name,description,youtube_url,x,y,view:'anterior'|'posterior'}]
+    content_modes: dict = {}  # onglets actives {videos:bool, text:bool, live:bool} (vide = tous actifs)
     faq: List[dict] = []  # Questions des participants [{id,q,a}]
     quiz: dict = {}  # {pass_score:int, questions:[{id,q,options:[str],correct_index:int,scenario:bool}]}
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -176,6 +177,7 @@ class LevelContentCreate(BaseModel):
     youtube_url: str = ""
     map_markers: List[dict] = []
     muscle_markers: List[dict] = []
+    content_modes: dict = {}
     faq: List[dict] = []
     quiz: dict = {}
 
@@ -1099,6 +1101,29 @@ async def quiz_result(user_id: str, level_id: str):
         return {"attempted": False, "passed": False, "best_percent": 0}
     r = res[0]
     return {"attempted": True, "passed": bool(r.get("passed")), "best_percent": r.get("percent", 0)}
+
+class QuizCheck(BaseModel):
+    level_id: str
+    question_id: str = ""
+    question_index: int = -1
+    answer: int = -1
+
+@api_router.post("/quiz/check")
+async def check_quiz_answer(input: QuizCheck, request: Request):
+    """Verifie UNE reponse et renvoie la bonne (pour le quiz question-par-question).
+    Ne revele la bonne reponse qu'apres que le participant a repondu."""
+    rate_limit(request, "quizcheck", limit=80, window=300)
+    content = await db.level_content.find_one({"level_id": input.level_id}, {"_id": 0})
+    questions = ((content or {}).get("quiz") or {}).get("questions") or []
+    q = None
+    if input.question_id:
+        q = next((x for x in questions if x.get("id") == input.question_id), None)
+    if q is None and 0 <= input.question_index < len(questions):
+        q = questions[input.question_index]
+    if q is None:
+        raise HTTPException(status_code=404, detail="Question introuvable")
+    ci = q.get("correct_index")
+    return {"correct": input.answer == ci, "correct_index": ci}
 
 # =====================
 # USER LEVEL PROGRESS ENDPOINTS

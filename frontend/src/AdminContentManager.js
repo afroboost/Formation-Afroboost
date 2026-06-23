@@ -34,6 +34,7 @@ const AdminContentManager = () => {
   const [muscleMarkers, setMuscleMarkers] = useState([]);
   const [quiz, setQuiz] = useState({ pass_score: 80, questions: [] });
   const [faq, setFaq] = useState([]);
+  const [contentModes, setContentModes] = useState({ videos: true, text: true, live: true });
   const [loading, setLoading] = useState(false);
 
   const loadLevelContent = async (levelId) => {
@@ -53,6 +54,8 @@ const AdminContentManager = () => {
       setMuscleMarkers(data.muscle_markers || []);
       setQuiz(data.quiz && data.quiz.questions ? data.quiz : { pass_score: 80, questions: [] });
       setFaq(data.faq || []);
+      const cm = data.content_modes && Object.keys(data.content_modes).length ? data.content_modes : { videos: true, text: true, live: true };
+      setContentModes({ videos: cm.videos !== false, text: cm.text !== false, live: cm.live !== false });
     } catch (error) {
       console.error('Error loading content:', error);
     }
@@ -195,6 +198,9 @@ const AdminContentManager = () => {
   };
   const removeFaq = (index) => setFaq(faq.filter((_, i) => i !== index));
 
+  // Content modes helper (immutable)
+  const setMode = (key, checked) => setContentModes((m) => ({ ...m, [key]: !!checked }));
+
   const handleSave = async () => {
     if (!selectedLevel) return;
 
@@ -213,7 +219,8 @@ const AdminContentManager = () => {
         map_markers: mapMarkers,
         muscle_markers: muscleMarkers,
         quiz,
-        faq
+        faq,
+        content_modes: contentModes
       });
       toast.success('Contenu sauvegardé!');
     } catch (error) {
@@ -253,6 +260,48 @@ const AdminContentManager = () => {
           {selectedLevel && (
             <div className="space-y-6">
               <h3 className="text-xl text-white font-bold">{selectedLevel.name}</h3>
+
+              {/* Modes de contenu visibles par le participant */}
+              <div>
+                <Label className="text-gray-300 text-lg mb-2 block">
+                  Modes de contenu visibles par le participant
+                </Label>
+                <Label className="text-gray-400 text-sm mb-3 block">
+                  Les onglets décochés sont MASQUÉS pour le participant (pas seulement grisés).
+                </Label>
+                <div className="flex flex-wrap gap-6">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="mode-videos"
+                      checked={contentModes.videos}
+                      onCheckedChange={(c) => setMode('videos', c)}
+                    />
+                    <Label htmlFor="mode-videos" className="text-gray-300 cursor-pointer">
+                      Vidéos
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="mode-text"
+                      checked={contentModes.text}
+                      onCheckedChange={(c) => setMode('text', c)}
+                    />
+                    <Label htmlFor="mode-text" className="text-gray-300 cursor-pointer">
+                      Cours écrit
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="mode-live"
+                      checked={contentModes.live}
+                      onCheckedChange={(c) => setMode('live', c)}
+                    />
+                    <Label htmlFor="mode-live" className="text-gray-300 cursor-pointer">
+                      Live
+                    </Label>
+                  </div>
+                </div>
+              </div>
 
               {/* Videos Section */}
               <div>

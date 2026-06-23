@@ -161,6 +161,8 @@ class LevelContent(BaseModel):
     map_markers: List[dict] = []  # carte interactive [{id,country,x,y,style_name,youtube_url,history}]
     muscle_markers: List[dict] = []  # anatomie [{id,name,description,youtube_url,x,y,view:'anterior'|'posterior'}]
     content_modes: dict = {}  # onglets actives {videos:bool, text:bool, live:bool} (vide = tous actifs)
+    topic_videos: List[dict] = []  # vidéos thématiques [{id,title,youtube_url}]
+    help: dict = {}  # bouton aide {enabled:bool, title:str, booking_url:str, allow_request:bool}
     faq: List[dict] = []  # Questions des participants [{id,q,a}]
     quiz: dict = {}  # {pass_score:int, questions:[{id,q,options:[str],correct_index:int,scenario:bool}]}
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -178,6 +180,8 @@ class LevelContentCreate(BaseModel):
     map_markers: List[dict] = []
     muscle_markers: List[dict] = []
     content_modes: dict = {}
+    topic_videos: List[dict] = []
+    help: dict = {}
     faq: List[dict] = []
     quiz: dict = {}
 
@@ -1124,6 +1128,45 @@ async def check_quiz_answer(input: QuizCheck, request: Request):
         raise HTTPException(status_code=404, detail="Question introuvable")
     ci = q.get("correct_index")
     return {"correct": input.answer == ci, "correct_index": ci}
+
+# ---- AIDE : reservation 30 min avec un instructeur ----
+class HelpRequestCreate(BaseModel):
+    user_id: str = ""
+    user_name: str = ""
+    level_id: str = ""
+    preferred: str = ""  # creneau souhaite (texte libre)
+    message: str = ""
+
+@api_router.post("/help-request")
+async def create_help_request(input: HelpRequestCreate, request: Request):
+    rate_limit(request, "help", limit=5, window=300)
+    if not (input.preferred or "").strip() and not (input.message or "").strip():
+        raise HTTPException(status_code=400, detail="Indiquez un créneau souhaité ou un message")
+    now = datetime.now(timezone.utc)
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": (input.user_id or "").strip(), "user_name": (input.user_name or "").strip(),
+        "level_id": input.level_id, "preferred": (input.preferred or "").strip()[:500],
+        "message": (input.message or "").strip()[:2000],
+        "status": "pending", "created_at": now.isoformat(),
+    }
+    await db.help_requests.insert_one(doc)
+    doc.pop("_id", None)
+    return {"success": True, "request": doc}
+
+@api_router.get("/help-requests", dependencies=[Depends(require_admin)])
+async def list_help_requests():
+    return await db.help_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(2000)
+
+@api_router.post("/help-requests/{req_id}/handle", dependencies=[Depends(require_admin)])
+async def handle_help_request(req_id: str):
+    await db.help_requests.update_one({"id": req_id}, {"$set": {"status": "handled", "updated_at": datetime.now(timezone.utc).isoformat()}})
+    return {"success": True}
+
+@api_router.delete("/help-requests/{req_id}", dependencies=[Depends(require_admin)])
+async def delete_help_request(req_id: str):
+    await db.help_requests.delete_one({"id": req_id})
+    return {"success": True}
 
 # =====================
 # USER LEVEL PROGRESS ENDPOINTS

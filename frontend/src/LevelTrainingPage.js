@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { PlayCircle, FileText, Video, CheckCircle, Lock, Calendar, Users, ArrowLeft, Image, Award, HelpCircle } from 'lucide-react';
 import FaqAccordion from '@/components/visuals/FaqAccordion';
+import TopicVideos from '@/components/visuals/TopicVideos';
+import HelpBooking from '@/components/visuals/HelpBooking';
 import AfricaStylesMap from '@/components/visuals/AfricaStylesMap';
 import AnatomyDiagram from '@/components/visuals/AnatomyDiagram';
 import StyleGallery from '@/components/visuals/StyleGallery';
@@ -328,6 +330,11 @@ const LevelTrainingPage = () => {
 
         {activeTab === 'text' && (
           <>
+          {content?.help?.enabled && (
+            <div className="mb-8">
+              <HelpBooking help={content.help} levelId={levelId} userId={userId} userName={userName} />
+            </div>
+          )}
           {(
             <Card className="card-dark border-neon mb-8" data-testid="visual-content">
               <CardHeader>
@@ -355,6 +362,12 @@ const LevelTrainingPage = () => {
                   <p className="text-gray-400 text-sm text-center py-8">
                     Aucun média pour ce niveau pour le moment. Ajoutez une vidéo YouTube ou une image dans l&apos;administration.
                   </p>
+                )}
+                {content?.topic_videos?.length > 0 && (
+                  <div className="mt-8">
+                    <h4 className="text-white font-semibold mb-3">Vidéos de démonstration</h4>
+                    <TopicVideos videos={content.topic_videos} />
+                  </div>
                 )}
                 {content?.images?.length > 0 && (
                   <div className="mt-8">

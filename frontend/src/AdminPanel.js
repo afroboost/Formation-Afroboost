@@ -15,6 +15,7 @@ import AdminAccessComplete from '@/AdminAccessComplete';
 import AdminPaymentConfig from '@/AdminPaymentConfig';
 import AdminPaymentHistory from '@/AdminPaymentHistory';
 import AdminEngagementTracking from '@/AdminEngagementTracking';
+import AdminHelpRequests from '@/AdminHelpRequests';
 import { initAdminAuth, isAdminAuthenticated } from '@/lib/adminAuth';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -416,6 +417,13 @@ const AdminPanel = () => {
         {/* ==================== */}
         <div className="mb-8">
           <AdminContentManager />
+        </div>
+
+        {/* ==================== */}
+        {/* SECTION 8: DEMANDES D'AIDE (RÉSERVATIONS) */}
+        {/* ==================== */}
+        <div className="mb-8">
+          <AdminHelpRequests />
         </div>
 
         <div className="text-center mt-12 space-x-4">

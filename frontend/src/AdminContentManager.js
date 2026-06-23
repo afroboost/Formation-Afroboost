@@ -34,6 +34,8 @@ const AdminContentManager = () => {
   const [muscleMarkers, setMuscleMarkers] = useState([]);
   const [quiz, setQuiz] = useState({ pass_score: 80, questions: [] });
   const [faq, setFaq] = useState([]);
+  const [topicVideos, setTopicVideos] = useState([]);
+  const [help, setHelp] = useState({ enabled: false, title: '', booking_url: '', allow_request: true });
   const [contentModes, setContentModes] = useState({ videos: true, text: true, live: true });
   const [loading, setLoading] = useState(false);
 
@@ -54,6 +56,8 @@ const AdminContentManager = () => {
       setMuscleMarkers(data.muscle_markers || []);
       setQuiz(data.quiz && data.quiz.questions ? data.quiz : { pass_score: 80, questions: [] });
       setFaq(data.faq || []);
+      setTopicVideos(data.topic_videos || []);
+      setHelp(data.help && Object.keys(data.help).length ? { enabled: !!data.help.enabled, title: data.help.title || '', booking_url: data.help.booking_url || '', allow_request: data.help.allow_request !== false } : { enabled: false, title: '', booking_url: '', allow_request: true });
       const cm = data.content_modes && Object.keys(data.content_modes).length ? data.content_modes : { videos: true, text: true, live: true };
       setContentModes({ videos: cm.videos !== false, text: cm.text !== false, live: cm.live !== false });
     } catch (error) {
@@ -198,6 +202,18 @@ const AdminContentManager = () => {
   };
   const removeFaq = (index) => setFaq(faq.filter((_, i) => i !== index));
 
+  // Vidéos thématiques helpers (immutable)
+  const addTopicVideo = () => setTopicVideos([...topicVideos, { id: `tv-${Date.now()}`, title: '', youtube_url: '' }]);
+  const updateTopicVideo = (index, field, value) => {
+    const updated = [...topicVideos];
+    updated[index] = { ...updated[index], [field]: value };
+    setTopicVideos(updated);
+  };
+  const removeTopicVideo = (index) => setTopicVideos(topicVideos.filter((_, i) => i !== index));
+
+  // Bouton d'aide helper (immutable)
+  const setHelpField = (field, value) => setHelp((h) => ({ ...h, [field]: value }));
+
   // Content modes helper (immutable)
   const setMode = (key, checked) => setContentModes((m) => ({ ...m, [key]: !!checked }));
 
@@ -220,6 +236,8 @@ const AdminContentManager = () => {
         muscle_markers: muscleMarkers,
         quiz,
         faq,
+        topic_videos: topicVideos,
+        help,
         content_modes: contentModes
       });
       toast.success('Contenu sauvegardé!');
@@ -300,6 +318,54 @@ const AdminContentManager = () => {
                       Live
                     </Label>
                   </div>
+                </div>
+              </div>
+
+              {/* Bouton d'aide « Réserver 30 min » */}
+              <div>
+                <Label className="text-gray-300 text-lg mb-2 block">Bouton d&apos;aide « Réserver 30 min »</Label>
+                <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="help-enabled"
+                      checked={help.enabled}
+                      onCheckedChange={(c) => setHelpField('enabled', !!c)}
+                    />
+                    <Label htmlFor="help-enabled" className="text-gray-300 cursor-pointer">
+                      Activer le bouton d&apos;aide sur ce niveau
+                    </Label>
+                  </div>
+                  <div>
+                    <Label className="text-gray-400 text-sm mb-1 block">Titre du bouton (optionnel)</Label>
+                    <Input
+                      placeholder="Besoin d'aide ? Réserver 30 min…"
+                      value={help.title}
+                      onChange={(e) => setHelpField('title', e.target.value)}
+                      className="input-dark"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-400 text-sm mb-1 block">Lien de réservation (Calendly / Google, optionnel)</Label>
+                    <Input
+                      placeholder="https://calendly.com/…"
+                      value={help.booking_url}
+                      onChange={(e) => setHelpField('booking_url', e.target.value)}
+                      className="input-dark"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="help-allow-request"
+                      checked={help.allow_request}
+                      onCheckedChange={(c) => setHelpField('allow_request', !!c)}
+                    />
+                    <Label htmlFor="help-allow-request" className="text-gray-300 cursor-pointer">
+                      Autoriser une demande de créneau dans l&apos;app
+                    </Label>
+                  </div>
+                  <Label className="text-gray-400 text-sm block">
+                    Si un lien est renseigné, le bouton ouvre ce calendrier ; sinon, le participant envoie une demande de créneau (visible dans Demandes d&apos;aide).
+                  </Label>
                 </div>
               </div>
 
@@ -446,6 +512,45 @@ const AdminContentManager = () => {
                 <Label className="text-gray-400 text-sm mt-1 block">
                   L'admin peut basculer image ↔ vidéo en remplissant ou vidant ce champ.
                 </Label>
+              </div>
+
+              {/* Vidéos thématiques (démos) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-gray-300 text-lg">Vidéos thématiques (démos)</Label>
+                  <Button onClick={addTopicVideo} size="sm" className="btn-neon" data-testid="add-topic-video">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Ajouter une vidéo
+                  </Button>
+                </div>
+                <Label className="text-gray-400 text-sm mb-3 block">
+                  ex. Niveau 3 : Tempo / BPM, Compter la musique, Cueing.
+                </Label>
+                <div className="space-y-3">
+                  {topicVideos.map((tv, index) => (
+                    <div key={tv.id || index} className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <div className="grid md:grid-cols-2 gap-2 mb-2">
+                        <Input
+                          placeholder="Titre (« Tempo / BPM »)"
+                          value={tv.title || ''}
+                          onChange={(e) => updateTopicVideo(index, 'title', e.target.value)}
+                          className="input-dark"
+                        />
+                        <Input
+                          placeholder="Lien YouTube"
+                          value={tv.youtube_url || ''}
+                          onChange={(e) => updateTopicVideo(index, 'youtube_url', e.target.value)}
+                          className="input-dark"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button onClick={() => removeTopicVideo(index)} variant="destructive" size="sm">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Carte interactive (styles & pays) */}

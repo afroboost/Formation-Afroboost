@@ -33,8 +33,8 @@ const Footer = () => {
             <h2 className="text-sm font-semibold text-white mb-3">Afroboosteur</h2>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="https://afroboosteur.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-fuchsia-400 transition-colors">
-                  Site de l'association ↗
+                <a href="https://www.afroboosteur.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-fuchsia-400 transition-colors">
+                  Association Afroboosteur ↗
                 </a>
               </li>
             </ul>

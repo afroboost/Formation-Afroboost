@@ -5,9 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { 
-  Trash2, Calendar, Users, CheckCircle, XCircle, 
-  ChevronDown, ChevronUp, Eye, Clock, Award 
+import {
+  Trash2, Calendar, Users, CheckCircle, XCircle,
+  ChevronDown, ChevronUp, Eye, Clock, Award, Building2
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AdminContentManager from '@/AdminContentManager';
@@ -130,6 +130,15 @@ const AdminPanel = () => {
             ADMIN PANEL
           </h1>
           <p className="text-gray-400">Gestion des examens et certifications Afroboost</p>
+          <a
+            href="https://www.afroboosteur.com/admin"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Ouvrir l'admin de l'Association (connexion partagée)"
+            className="inline-flex items-center gap-2 mt-5 px-4 py-2 rounded-lg text-sm font-medium text-gray-200 bg-purple-500/10 border border-purple-500/40 hover:bg-purple-500/20 hover:text-white transition-all"
+          >
+            <Building2 size={16} /> Association
+          </a>
         </div>
 
         {/* ==================== */}

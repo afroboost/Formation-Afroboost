@@ -31,6 +31,7 @@ const LevelTrainingPage = () => {
   const [userId, setUserId] = useState('');
   const [userName, setUserName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [condAccepted, setCondAccepted] = useState(null); // null=inconnu, true/false
 
   useEffect(() => {
     const storedUserId = localStorage.getItem('afroboost_user_id');
@@ -40,6 +41,10 @@ const LevelTrainingPage = () => {
       setUserId(storedUserId);
       setUserName(storedUserName || '');
       fetchData(storedUserId);
+      // Garde : conditions de participation acceptees ? (accès direct par URL)
+      axios.get(`${API}/conditions/status/${storedUserId}`)
+        .then((r) => setCondAccepted(!!r.data?.accepted))
+        .catch(() => setCondAccepted(true)); // erreur transitoire : ne pas verrouiller (la page Niveaux reste le garde principal)
     } else {
       setLoading(false);
     }
@@ -142,6 +147,26 @@ const LevelTrainingPage = () => {
           <CardContent>
             <Link to="/levels">
               <Button className="btn-neon w-full">Retour aux niveaux</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (condAccepted === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <Card className="card-dark border-neon max-w-md">
+          <CardHeader>
+            <CardTitle className="text-white">Conditions de participation requises</CardTitle>
+            <CardDescription className="text-gray-400">
+              Vous devez lire et accepter les conditions de participation avant d&apos;accéder aux niveaux.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/levels">
+              <Button className="btn-neon w-full">Lire et accepter les conditions</Button>
             </Link>
           </CardContent>
         </Card>

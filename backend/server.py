@@ -1075,6 +1075,78 @@ async def update_content_modes(level_id: str, input: ContentModesUpdate):
     )
     return {"success": True, "content_modes": modes}
 
+# ---- CONDITIONS DE PARTICIPATION (acceptation obligatoire avant les niveaux) ----
+CONDITIONS_DEFAULT_VERSION = "v1-2026-06"
+
+class ConditionsConfig(BaseModel):
+    text: str = ""
+    version: str = CONDITIONS_DEFAULT_VERSION
+    privacy_url: str = ""
+    charte_url: str = ""
+
+class ConditionsAccept(BaseModel):
+    user_id: str = ""
+    user_name: str = ""
+    version: str = ""
+
+async def _get_conditions():
+    doc = await db.formation_conditions.find_one({"key": "current"}, {"_id": 0})
+    if not doc:
+        doc = {"key": "current", "text": "", "version": CONDITIONS_DEFAULT_VERSION, "privacy_url": "", "charte_url": ""}
+    return doc
+
+@api_router.get("/conditions")
+async def get_conditions(response: Response):
+    response.headers["Cache-Control"] = "no-store, must-revalidate"
+    d = await _get_conditions()
+    return {"text": d.get("text", ""), "version": d.get("version", ""),
+            "privacy_url": d.get("privacy_url", ""), "charte_url": d.get("charte_url", "")}
+
+@api_router.get("/conditions/status/{user_id}")
+async def conditions_status(user_id: str, response: Response):
+    response.headers["Cache-Control"] = "no-store, must-revalidate"
+    d = await _get_conditions()
+    ver = d.get("version", "")
+    acc = await db.condition_acceptances.find_one({"user_id": user_id, "version": ver}, {"_id": 0})
+    return {"accepted": bool(acc), "current_version": ver,
+            "accepted_version": (acc or {}).get("version"), "accepted_at": (acc or {}).get("accepted_at")}
+
+@api_router.post("/conditions/accept")
+async def accept_conditions(input: ConditionsAccept, request: Request):
+    rate_limit(request, "cond", limit=20, window=300)
+    if not (input.user_id or "").strip():
+        raise HTTPException(status_code=400, detail="Identité requise pour accepter les conditions")
+    d = await _get_conditions()
+    ver = d.get("version", "")  # on enregistre TOUJOURS la version courante (anti-rejeu)
+    now = datetime.now(timezone.utc)
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": (input.user_id or "").strip(), "user_name": (input.user_name or "").strip(),
+        "version": ver, "accepted_at": now.isoformat(),
+        "ip": request.client.host if request.client else None,
+    }
+    await db.condition_acceptances.update_one(
+        {"user_id": doc["user_id"], "version": ver},
+        {"$setOnInsert": doc}, upsert=True)
+    return {"success": True, "version": ver, "accepted_at": doc["accepted_at"]}
+
+@api_router.get("/admin/conditions", dependencies=[Depends(require_admin)])
+async def get_conditions_admin():
+    return await _get_conditions()
+
+@api_router.post("/admin/conditions", dependencies=[Depends(require_admin)])
+async def update_conditions_admin(input: ConditionsConfig):
+    doc = {"key": "current", "text": input.text or "",
+           "version": (input.version or CONDITIONS_DEFAULT_VERSION).strip(),
+           "privacy_url": input.privacy_url or "", "charte_url": input.charte_url or "",
+           "updated_at": datetime.now(timezone.utc).isoformat()}
+    await db.formation_conditions.update_one({"key": "current"}, {"$set": doc}, upsert=True)
+    return {"success": True, **doc}
+
+@api_router.get("/admin/condition-acceptances", dependencies=[Depends(require_admin)])
+async def list_condition_acceptances():
+    return await db.condition_acceptances.find({}, {"_id": 0}).sort("accepted_at", -1).to_list(5000)
+
 # ---- QUIZ : test de reussite par niveau (correction cote serveur) ----
 def _next_level_id(level_id):
     import re

@@ -16,6 +16,7 @@ import AdminPaymentConfig from '@/AdminPaymentConfig';
 import AdminPaymentHistory from '@/AdminPaymentHistory';
 import AdminEngagementTracking from '@/AdminEngagementTracking';
 import AdminHelpRequests from '@/AdminHelpRequests';
+import AdminConditions from '@/AdminConditions';
 import { initAdminAuth, isAdminAuthenticated } from '@/lib/adminAuth';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -424,6 +425,13 @@ const AdminPanel = () => {
         {/* ==================== */}
         <div className="mb-8">
           <AdminHelpRequests />
+        </div>
+
+        {/* ==================== */}
+        {/* SECTION 9: CONDITIONS DE PARTICIPATION */}
+        {/* ==================== */}
+        <div className="mb-8">
+          <AdminConditions />
         </div>
 
         <div className="text-center mt-12 space-x-4">

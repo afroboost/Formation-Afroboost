@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Download, CheckCircle, GraduationCap, Award, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ConditionsGate from '@/components/ConditionsGate';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -64,6 +65,7 @@ const AVAILABLE_LEVELS = [
 const LevelsPage = () => {
   const [studentId, setStudentId] = useState('');
   const [studentName, setStudentName] = useState('');
+  const [conditionsOK, setConditionsOK] = useState(false);
   const [myDocuments, setMyDocuments] = useState([]);
   const [showValidationForm, setShowValidationForm] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState(null);
@@ -299,6 +301,14 @@ const LevelsPage = () => {
 
   return (
     <div className="min-h-screen py-12 px-4">
+      {/* Acceptation obligatoire des conditions avant d'acceder aux niveaux */}
+      {studentId && !conditionsOK && (
+        <ConditionsGate
+          userId={studentId}
+          userName={studentName}
+          onAccepted={() => setConditionsOK(true)}
+        />
+      )}
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <h1 className="text-5xl sm:text-6xl font-bold mb-6 neon-glow" data-testid="levels-title">

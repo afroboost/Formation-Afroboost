@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, Info } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -37,6 +37,7 @@ const AdminContentManager = () => {
   const [topicVideos, setTopicVideos] = useState([]);
   const [help, setHelp] = useState({ enabled: false, title: '', booking_url: '', allow_request: true });
   const [contentModes, setContentModes] = useState({ videos: true, text: true, live: true });
+  const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const loadLevelContent = async (levelId) => {
@@ -60,6 +61,7 @@ const AdminContentManager = () => {
       setHelp(data.help && Object.keys(data.help).length ? { enabled: !!data.help.enabled, title: data.help.title || '', booking_url: data.help.booking_url || '', allow_request: data.help.allow_request !== false } : { enabled: false, title: '', booking_url: '', allow_request: true });
       const cm = data.content_modes && Object.keys(data.content_modes).length ? data.content_modes : { videos: true, text: true, live: true };
       setContentModes({ videos: cm.videos !== false, text: cm.text !== false, live: cm.live !== false });
+      setMaterials(data.materials || []);
     } catch (error) {
       console.error('Error loading content:', error);
     }
@@ -211,6 +213,15 @@ const AdminContentManager = () => {
   };
   const removeTopicVideo = (index) => setTopicVideos(topicVideos.filter((_, i) => i !== index));
 
+  // Matériel helpers (Niveau 4 — galerie interactive, immutable)
+  const addMaterial = () => setMaterials([...materials, { id: `mat-${Date.now()}`, name: '', description: '', image_url: '' }]);
+  const updateMaterial = (index, field, value) => {
+    const updated = [...materials];
+    updated[index] = { ...updated[index], [field]: value };
+    setMaterials(updated);
+  };
+  const removeMaterial = (index) => setMaterials(materials.filter((_, i) => i !== index));
+
   // Bouton d'aide helper (immutable)
   const setHelpField = (field, value) => setHelp((h) => ({ ...h, [field]: value }));
 
@@ -238,7 +249,8 @@ const AdminContentManager = () => {
         faq,
         topic_videos: topicVideos,
         help,
-        content_modes: contentModes
+        content_modes: contentModes,
+        materials
       });
       toast.success('Contenu sauvegardé!');
     } catch (error) {
@@ -318,6 +330,12 @@ const AdminContentManager = () => {
                       Live
                     </Label>
                   </div>
+                </div>
+                <div className="mt-3 flex items-start gap-2 p-3 bg-amber-500/10 rounded-lg border border-amber-500/40">
+                  <Info className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
+                  <p className="text-amber-200 text-sm">
+                    Après avoir modifié les modes, cliquez « Sauvegarder le contenu » en bas de cette section pour appliquer (le bouton « Sauvegarder la configuration » concerne uniquement le paiement).
+                  </p>
                 </div>
               </div>
 
@@ -545,6 +563,52 @@ const AdminContentManager = () => {
                       </div>
                       <div className="flex justify-end">
                         <Button onClick={() => removeTopicVideo(index)} variant="destructive" size="sm">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Matériel (Niveau 4 — galerie interactive) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-gray-300 text-lg">Matériel (Niveau 4 — galerie interactive)</Label>
+                  <Button onClick={addMaterial} size="sm" className="btn-neon" data-testid="add-material">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Ajouter un matériel
+                  </Button>
+                </div>
+                <Label className="text-gray-400 text-sm mb-3 block">
+                  Au clic sur un matériel côté participant : image + description. Ajoutez/retirez librement.
+                </Label>
+                <div className="space-y-3">
+                  {materials.map((material, index) => (
+                    <div key={material.id || index} className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <Input
+                        placeholder="Nom du matériel"
+                        value={material.name || ''}
+                        onChange={(e) => updateMaterial(index, 'name', e.target.value)}
+                        className="input-dark mb-2"
+                      />
+                      <Textarea
+                        placeholder="Description (courte, affichée au clic)"
+                        value={material.description || ''}
+                        onChange={(e) => updateMaterial(index, 'description', e.target.value)}
+                        className="input-dark mb-2"
+                      />
+                      <Input
+                        placeholder="Lien image (URL — uploadable/collable)"
+                        value={material.image_url || ''}
+                        onChange={(e) => updateMaterial(index, 'image_url', e.target.value)}
+                        className="input-dark mb-1"
+                      />
+                      <Label className="text-gray-400 text-sm mb-2 block">
+                        Collez l&apos;URL d&apos;une image (placeholder en attendant)
+                      </Label>
+                      <div className="flex justify-end">
+                        <Button onClick={() => removeMaterial(index)} variant="destructive" size="sm">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

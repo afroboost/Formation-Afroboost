@@ -10,6 +10,7 @@ import { PlayCircle, FileText, Video, CheckCircle, Lock, Calendar, Users, ArrowL
 import FaqAccordion from '@/components/visuals/FaqAccordion';
 import TopicVideos from '@/components/visuals/TopicVideos';
 import HelpBooking from '@/components/visuals/HelpBooking';
+import MaterialShowcase from '@/components/visuals/MaterialShowcase';
 import AfricaStylesMap from '@/components/visuals/AfricaStylesMap';
 import AnatomyDiagram from '@/components/visuals/AnatomyDiagram';
 import StyleGallery from '@/components/visuals/StyleGallery';
@@ -367,6 +368,12 @@ const LevelTrainingPage = () => {
                   <div className="mt-8">
                     <h4 className="text-white font-semibold mb-3">Vidéos de démonstration</h4>
                     <TopicVideos videos={content.topic_videos} />
+                  </div>
+                )}
+                {content?.materials?.length > 0 && (
+                  <div className="mt-8">
+                    <h4 className="text-white font-semibold mb-3">Matériel</h4>
+                    <MaterialShowcase materials={content.materials} />
                   </div>
                 )}
                 {content?.images?.length > 0 && (

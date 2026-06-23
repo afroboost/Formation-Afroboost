@@ -162,6 +162,7 @@ class LevelContent(BaseModel):
     muscle_markers: List[dict] = []  # anatomie [{id,name,description,youtube_url,x,y,view:'anterior'|'posterior'}]
     content_modes: dict = {}  # onglets actives {videos:bool, text:bool, live:bool} (vide = tous actifs)
     topic_videos: List[dict] = []  # vidéos thématiques [{id,title,youtube_url}]
+    materials: List[dict] = []  # matériel interactif (Niveau 4) [{id,name,description,image_url}]
     help: dict = {}  # bouton aide {enabled:bool, title:str, booking_url:str, allow_request:bool}
     faq: List[dict] = []  # Questions des participants [{id,q,a}]
     quiz: dict = {}  # {pass_score:int, questions:[{id,q,options:[str],correct_index:int,scenario:bool}]}
@@ -181,6 +182,7 @@ class LevelContentCreate(BaseModel):
     muscle_markers: List[dict] = []
     content_modes: dict = {}
     topic_videos: List[dict] = []
+    materials: List[dict] = []
     help: dict = {}
     faq: List[dict] = []
     quiz: dict = {}

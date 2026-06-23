@@ -235,7 +235,7 @@ const AdminContentManager = () => {
     try {
       await axios.post(`${API}/level-content`, {
         level_id: selectedLevel.id,
-        level_name: selectedLevel.name,
+        level_name: content?.level_name || selectedLevel.name,
         videos,
         text_content: textContent,
         live_required: liveRequired,

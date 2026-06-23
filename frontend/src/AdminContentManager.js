@@ -29,13 +29,16 @@ const AdminContentManager = () => {
   const [liveSessions, setLiveSessions] = useState([]);
   const [diagramUrl, setDiagramUrl] = useState('');
   const [images, setImages] = useState([]);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [mapMarkers, setMapMarkers] = useState([]);
+  const [quiz, setQuiz] = useState({ pass_score: 80, questions: [] });
   const [loading, setLoading] = useState(false);
 
   const loadLevelContent = async (levelId) => {
     try {
-      const response = await axios.get(`${API}/level-content/${levelId}`);
+      const response = await axios.get(`${API}/admin/level-content/${levelId}`);
       const data = response.data;
-      
+
       setContent(data);
       setVideos(data.videos || []);
       setTextContent(data.text_content || '');
@@ -43,6 +46,9 @@ const AdminContentManager = () => {
       setLiveSessions(data.live_sessions || []);
       setDiagramUrl(data.diagram_url || '');
       setImages(data.images || []);
+      setYoutubeUrl(data.youtube_url || '');
+      setMapMarkers(data.map_markers || []);
+      setQuiz(data.quiz && data.quiz.questions ? data.quiz : { pass_score: 80, questions: [] });
     } catch (error) {
       console.error('Error loading content:', error);
     }
@@ -96,6 +102,69 @@ const AdminContentManager = () => {
   };
   const removeImage = (index) => setImages(images.filter((_, i) => i !== index));
 
+  // Map markers helpers
+  const addMarker = () => setMapMarkers([...mapMarkers, { country: '', x: 50, y: 50, style_name: '', youtube_url: '', history: '' }]);
+  const updateMarker = (index, field, value) => {
+    const updated = [...mapMarkers];
+    updated[index] = { ...updated[index], [field]: value };
+    setMapMarkers(updated);
+  };
+  const removeMarker = (index) => setMapMarkers(mapMarkers.filter((_, i) => i !== index));
+
+  // Quiz helpers (immutable)
+  const updateQuizField = (field, value) => {
+    setQuiz({ ...quiz, [field]: value });
+  };
+  const addQuestion = () => {
+    setQuiz({ ...quiz, questions: [...(quiz.questions || []), { q: '', options: ['', ''], correct_index: 0 }] });
+  };
+  const updateQuestion = (qIndex, value) => {
+    const questions = (quiz.questions || []).map((question, i) =>
+      i === qIndex ? { ...question, q: value } : question
+    );
+    setQuiz({ ...quiz, questions });
+  };
+  const removeQuestion = (qIndex) => {
+    setQuiz({ ...quiz, questions: (quiz.questions || []).filter((_, i) => i !== qIndex) });
+  };
+  const addOption = (qIndex) => {
+    const questions = (quiz.questions || []).map((question, i) =>
+      i === qIndex ? { ...question, options: [...(question.options || []), ''] } : question
+    );
+    setQuiz({ ...quiz, questions });
+  };
+  const updateOption = (qIndex, oIndex, value) => {
+    const questions = (quiz.questions || []).map((question, i) => {
+      if (i !== qIndex) return question;
+      const options = (question.options || []).map((opt, j) => (j === oIndex ? value : opt));
+      return { ...question, options };
+    });
+    setQuiz({ ...quiz, questions });
+  };
+  const removeOption = (qIndex, oIndex) => {
+    const questions = (quiz.questions || []).map((question, i) => {
+      if (i !== qIndex) return question;
+      const options = (question.options || []).filter((_, j) => j !== oIndex);
+      // Keep correct_index valid after removal
+      let correct = typeof question.correct_index === 'number' ? question.correct_index : 0;
+      if (oIndex < correct) {
+        correct = correct - 1;
+      } else if (oIndex === correct) {
+        correct = 0;
+      }
+      if (correct > options.length - 1) correct = options.length > 0 ? options.length - 1 : 0;
+      if (correct < 0) correct = 0;
+      return { ...question, options, correct_index: correct };
+    });
+    setQuiz({ ...quiz, questions });
+  };
+  const setCorrect = (qIndex, oIndex) => {
+    const questions = (quiz.questions || []).map((question, i) =>
+      i === qIndex ? { ...question, correct_index: oIndex } : question
+    );
+    setQuiz({ ...quiz, questions });
+  };
+
   const handleSave = async () => {
     if (!selectedLevel) return;
 
@@ -109,7 +178,10 @@ const AdminContentManager = () => {
         live_required: liveRequired,
         live_sessions: liveSessions,
         diagram_url: diagramUrl,
-        images
+        images,
+        youtube_url: youtubeUrl,
+        map_markers: mapMarkers,
+        quiz
       });
       toast.success('Contenu sauvegardé!');
     } catch (error) {
@@ -241,6 +313,163 @@ const AdminContentManager = () => {
                           </Button>
                         </div>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Vidéo principale (YouTube) */}
+              <div>
+                <Label className="text-gray-300 text-lg mb-2 block">Vidéo principale (YouTube)</Label>
+                <Input
+                  placeholder="https://www.youtube.com/watch?v=…"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  className="input-dark"
+                  data-testid="youtube-url-input"
+                />
+                <Label className="text-gray-400 text-sm mt-1 block">
+                  L'admin peut basculer image ↔ vidéo en remplissant ou vidant ce champ.
+                </Label>
+              </div>
+
+              {/* Carte interactive (styles & pays) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-gray-300 text-lg">Carte interactive (styles &amp; pays)</Label>
+                  <Button onClick={addMarker} size="sm" className="btn-neon" data-testid="add-marker">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Ajouter un pays/style
+                  </Button>
+                </div>
+                <Label className="text-gray-400 text-sm mb-3 block">
+                  Surtout pour le Niveau 1.
+                </Label>
+                <div className="space-y-3">
+                  {mapMarkers.map((marker, index) => (
+                    <div key={index} className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <div className="grid md:grid-cols-2 gap-2 mb-2">
+                        <Input
+                          placeholder="Pays"
+                          value={marker.country || ''}
+                          onChange={(e) => updateMarker(index, 'country', e.target.value)}
+                          className="input-dark"
+                        />
+                        <Input
+                          placeholder="Nom du style"
+                          value={marker.style_name || ''}
+                          onChange={(e) => updateMarker(index, 'style_name', e.target.value)}
+                          className="input-dark"
+                        />
+                      </div>
+                      <div className="grid md:grid-cols-3 gap-2 mb-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          placeholder="Position X %"
+                          value={marker.x}
+                          onChange={(e) => updateMarker(index, 'x', parseFloat(e.target.value))}
+                          className="input-dark"
+                        />
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          placeholder="Position Y %"
+                          value={marker.y}
+                          onChange={(e) => updateMarker(index, 'y', parseFloat(e.target.value))}
+                          className="input-dark"
+                        />
+                        <Input
+                          placeholder="Lien vidéo YouTube"
+                          value={marker.youtube_url || ''}
+                          onChange={(e) => updateMarker(index, 'youtube_url', e.target.value)}
+                          className="input-dark"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Textarea
+                          placeholder="Histoire courte"
+                          value={marker.history || ''}
+                          onChange={(e) => updateMarker(index, 'history', e.target.value)}
+                          className="input-dark flex-1"
+                        />
+                        <Button onClick={() => removeMarker(index)} variant="destructive" size="sm">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quiz du niveau (test de validation) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-gray-300 text-lg">Quiz du niveau (test de validation)</Label>
+                  <Button onClick={addQuestion} size="sm" className="btn-neon" data-testid="add-question">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Ajouter une question
+                  </Button>
+                </div>
+                <div className="mb-4 max-w-xs">
+                  <Label className="text-gray-400 text-sm mb-1 block">Score minimum (%)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="80"
+                    value={quiz.pass_score}
+                    onChange={(e) => updateQuizField('pass_score', parseInt(e.target.value))}
+                    className="input-dark"
+                    data-testid="quiz-pass-score"
+                  />
+                </div>
+                <div className="space-y-3">
+                  {(quiz.questions || []).map((question, qIndex) => (
+                    <div key={qIndex} className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <div className="flex gap-2 mb-3">
+                        <Textarea
+                          placeholder={`Question ${qIndex + 1}`}
+                          value={question.q || ''}
+                          onChange={(e) => updateQuestion(qIndex, e.target.value)}
+                          className="input-dark flex-1"
+                        />
+                        <Button onClick={() => removeQuestion(qIndex)} variant="destructive" size="sm">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <Label className="text-gray-400 text-sm mb-2 block">
+                        Réponses (cocher la bonne)
+                      </Label>
+                      <div className="space-y-2">
+                        {(question.options || []).map((option, oIndex) => (
+                          <div key={oIndex} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name={`correct-${qIndex}`}
+                              checked={question.correct_index === oIndex}
+                              onChange={() => setCorrect(qIndex, oIndex)}
+                              className="accent-purple-500"
+                              aria-label={`Marquer l'option ${oIndex + 1} comme correcte`}
+                            />
+                            <Input
+                              placeholder={`Option ${oIndex + 1}`}
+                              value={option}
+                              onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
+                              className="input-dark flex-1"
+                            />
+                            <Button onClick={() => removeOption(qIndex, oIndex)} variant="destructive" size="sm">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <Button onClick={() => addOption(qIndex)} size="sm" className="btn-neon mt-2">
+                        <Plus className="w-4 h-4 mr-1" />
+                        Ajouter une option
+                      </Button>
                     </div>
                   ))}
                 </div>

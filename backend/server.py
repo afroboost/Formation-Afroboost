@@ -157,6 +157,9 @@ class LevelContent(BaseModel):
     live_sessions: List[LiveSession] = []
     diagram_url: str = ""  # remplace le visuel integre (carte/anatomie) si renseigne
     images: List[dict] = []  # galerie [{url, caption, credit}] editable en admin
+    youtube_url: str = ""  # video principale du niveau (lien YouTube)
+    map_markers: List[dict] = []  # carte interactive [{id,country,x,y,style_name,youtube_url,history}]
+    quiz: dict = {}  # {pass_score:int, questions:[{id,q,options:[str],correct_index:int}]}
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class LevelContentCreate(BaseModel):
@@ -168,6 +171,9 @@ class LevelContentCreate(BaseModel):
     live_sessions: List[LiveSession] = []
     diagram_url: str = ""
     images: List[dict] = []
+    youtube_url: str = ""
+    map_markers: List[dict] = []
+    quiz: dict = {}
 
 class UserLevelProgress(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1004,25 +1010,95 @@ async def create_or_update_level_content(input: LevelContentCreate):
     
     return content
 
+import copy as _copy
+
+def _public_content(content):
+    """Retire les bonnes reponses du quiz (jamais exposees au participant)."""
+    if not content:
+        return content
+    c = _copy.deepcopy(content)
+    q = c.get("quiz") or {}
+    for question in (q.get("questions") or []):
+        question.pop("correct_index", None)
+    return c
+
 @api_router.get("/level-content/{level_id}")
 async def get_level_content(level_id: str):
     content = await db.level_content.find_one({"level_id": level_id}, {"_id": 0})
     if not content:
-        # Return empty content if not found
         return {
-            "level_id": level_id,
-            "level_name": "",
-            "videos": [],
-            "text_content": "",
-            "live_required": False,
-            "live_sessions": []
+            "level_id": level_id, "level_name": "", "videos": [], "text_content": "",
+            "live_required": False, "live_sessions": [], "youtube_url": "",
+            "map_markers": [], "quiz": {}
         }
-    return content
+    return _public_content(content)
 
 @api_router.get("/level-content")
 async def get_all_level_content():
     contents = await db.level_content.find({}, {"_id": 0}).to_list(1000)
-    return contents
+    return [_public_content(c) for c in contents]
+
+@api_router.get("/admin/level-content/{level_id}", dependencies=[Depends(require_admin)])
+async def get_level_content_admin(level_id: str):
+    """Contenu COMPLET (avec bonnes reponses du quiz) pour l'editeur admin."""
+    content = await db.level_content.find_one({"level_id": level_id}, {"_id": 0})
+    return content or {"level_id": level_id}
+
+# ---- QUIZ : test de reussite par niveau (correction cote serveur) ----
+def _next_level_id(level_id):
+    import re
+    m = re.match(r"level-(\d+)", level_id or "")
+    return f"level-{int(m.group(1)) + 1}" if m else None
+
+class QuizSubmit(BaseModel):
+    user_id: str
+    level_id: str
+    answers: List[int] = []
+
+@api_router.post("/quiz/submit")
+async def submit_quiz(input: QuizSubmit, request: Request):
+    rate_limit(request, "quiz", limit=20, window=300)
+    if not (input.user_id or "").strip():
+        raise HTTPException(status_code=400, detail="Identifiant participant manquant")
+    content = await db.level_content.find_one({"level_id": input.level_id}, {"_id": 0})
+    quiz = (content or {}).get("quiz") or {}
+    questions = quiz.get("questions") or []
+    if not questions:
+        raise HTTPException(status_code=400, detail="Aucun quiz pour ce niveau")
+    pass_score = int(quiz.get("pass_score", 80) or 80)
+    total = len(questions)
+    correct = sum(1 for i, q in enumerate(questions)
+                  if (input.answers[i] if i < len(input.answers) else -1) == q.get("correct_index"))
+    percent = round(correct * 100 / total) if total else 0
+    passed = percent >= pass_score
+    now = datetime.now(timezone.utc)
+    await db.quiz_results.insert_one({
+        "id": str(uuid.uuid4()), "user_id": input.user_id.strip(), "level_id": input.level_id,
+        "score": correct, "total": total, "percent": percent, "passed": passed,
+        "created_at": now.isoformat(),
+    })
+    if passed:
+        await db.user_level_progress.update_one(
+            {"user_id": input.user_id, "level_id": input.level_id},
+            {"$set": {"quiz_passed": True, "updated_at": now.isoformat()}}, upsert=True)
+        nxt = _next_level_id(input.level_id)
+        if nxt:
+            await db.user_level_progress.update_one(
+                {"user_id": input.user_id, "level_id": nxt},
+                {"$set": {"access_granted": True, "access_status": "active",
+                          "payment_status": "not_required", "updated_at": now.isoformat()}},
+                upsert=True)
+    return {"passed": passed, "score": correct, "total": total, "percent": percent,
+            "pass_score": pass_score,
+            "next_unlocked": bool(passed and _next_level_id(input.level_id))}
+
+@api_router.get("/quiz/result/{user_id}/{level_id}")
+async def quiz_result(user_id: str, level_id: str):
+    res = await db.quiz_results.find({"user_id": user_id, "level_id": level_id}, {"_id": 0}).sort("percent", -1).to_list(1)
+    if not res:
+        return {"attempted": False, "passed": False, "best_percent": 0}
+    r = res[0]
+    return {"attempted": True, "passed": bool(r.get("passed")), "best_percent": r.get("percent", 0)}
 
 # =====================
 # USER LEVEL PROGRESS ENDPOINTS
@@ -1169,8 +1245,10 @@ async def check_level_unlocked(user_id: str, level_id: str):
     videos_done = len(content.get('videos', [])) == 0 or len(progress.get('videos_completed', [])) >= len(content.get('videos', []))
     text_done = not content.get('text_content') or progress.get('text_confirmed', False)
     live_done = not content.get('live_required', False) or progress.get('live_attended', False)
-    
-    unlocked = videos_done and text_done and live_done
+    has_quiz = bool((content.get('quiz') or {}).get('questions'))
+    quiz_done = (not has_quiz) or progress.get('quiz_passed', False)
+
+    unlocked = videos_done and text_done and live_done and quiz_done
     
     return {
         "unlocked": unlocked,
@@ -1181,7 +1259,10 @@ async def check_level_unlocked(user_id: str, level_id: str):
         "text_done": text_done,
         "live_done": live_done,
         "videos_progress": f"{len(progress.get('videos_completed', []))}/{len(content.get('videos', []))}",
-        "live_required": content.get('live_required', False)
+        "live_required": content.get('live_required', False),
+        "content_done": videos_done and text_done and live_done,
+        "has_quiz": has_quiz,
+        "quiz_passed": bool(progress.get('quiz_passed', False))
     }
 
 @api_router.post("/level-access/request")

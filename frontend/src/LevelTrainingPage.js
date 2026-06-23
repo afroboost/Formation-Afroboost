@@ -6,10 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { PlayCircle, FileText, Video, CheckCircle, Lock, Calendar, Users, ArrowLeft, Image } from 'lucide-react';
+import { PlayCircle, FileText, Video, CheckCircle, Lock, Calendar, Users, ArrowLeft, Image, Award } from 'lucide-react';
 import AfricaStylesMap from '@/components/visuals/AfricaStylesMap';
 import AnatomyDiagram from '@/components/visuals/AnatomyDiagram';
 import StyleGallery from '@/components/visuals/StyleGallery';
+import YouTubeMedia from '@/components/visuals/YouTubeMedia';
+import InteractiveStyleMap from '@/components/visuals/InteractiveStyleMap';
+import LevelQuiz from '@/components/visuals/LevelQuiz';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -301,18 +304,22 @@ const LevelTrainingPage = () => {
 
         {activeTab === 'text' && (
           <>
-          {(content?.diagram_url || content?.images?.length > 0 || levelId === 'level-1' || levelId === 'level-2') && (
+          {(content?.youtube_url || content?.diagram_url || content?.map_markers?.length > 0 || content?.images?.length > 0 || levelId === 'level-1' || levelId === 'level-2') && (
             <Card className="card-dark border-neon mb-8" data-testid="visual-content">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2"><Image size={20} /> Visuel</CardTitle>
+                <CardTitle className="text-white flex items-center gap-2"><Image size={20} /> Média / Visuel</CardTitle>
                 <CardDescription className="text-gray-400">
-                  {levelId === 'level-1' ? "Carte des origines et galerie des 6 styles"
+                  {levelId === 'level-1' ? "Carte interactive des styles — cliquez un pays ou un style"
                     : levelId === 'level-2' ? "Repères anatomiques des muscles sollicités"
-                    : "Illustration du niveau"}
+                    : "Média du niveau"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {content?.diagram_url ? (
+                {(levelId === 'level-1' && content?.map_markers?.length > 0) ? (
+                  <InteractiveStyleMap markers={content.map_markers} />
+                ) : content?.youtube_url ? (
+                  <YouTubeMedia url={content.youtube_url} title={content?.level_name} />
+                ) : content?.diagram_url ? (
                   <img src={content.diagram_url} alt="Visuel du niveau" className="w-full rounded-xl" loading="lazy" />
                 ) : levelId === 'level-1' ? (
                   <AfricaStylesMap />
@@ -321,7 +328,7 @@ const LevelTrainingPage = () => {
                 ) : null}
                 {content?.images?.length > 0 && (
                   <div className="mt-8">
-                    <h4 className="text-white font-semibold mb-3">Les 6 styles en images</h4>
+                    <h4 className="text-white font-semibold mb-3">Galerie</h4>
                     <StyleGallery images={content.images} />
                   </div>
                 )}
@@ -369,6 +376,20 @@ const LevelTrainingPage = () => {
               )}
             </CardContent>
           </Card>
+
+          {content?.quiz?.questions?.length > 0 && (
+            <Card className="card-dark border-neon mt-8" data-testid="quiz-content">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2"><Award size={20} /> Exercice — Test de validation</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Réussissez le quiz pour valider le niveau et débloquer le suivant.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <LevelQuiz levelId={levelId} quiz={content.quiz} userId={userId} onPassed={() => userId && fetchData(userId)} />
+              </CardContent>
+            </Card>
+          )}
           </>
         )}
 

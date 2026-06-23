@@ -1269,11 +1269,38 @@ async def get_user_all_progress(user_id: str):
     progress_list = await db.user_level_progress.find({"user_id": user_id}, {"_id": 0}).to_list(1000)
     return progress_list
 
+def _prev_level_id(level_id: str):
+    try:
+        n = int(str(level_id).split('-')[1])
+        return f"level-{n-1}" if n > 1 else None
+    except Exception:
+        return None
+
+async def _prerequisite_met(user_id: str, level_id: str) -> bool:
+    """Gating sequentiel (option c) : pour acceder a un niveau il faut avoir
+    REUSSI le quiz du niveau precedent. Le Niveau 1 est toujours accessible.
+    Reussir un quiz ne contourne PAS le paiement (verifie separement)."""
+    prev = _prev_level_id(level_id)
+    if not prev:
+        return True
+    prev_content = await db.level_content.find_one({"level_id": prev}, {"_id": 0})
+    prev_has_quiz = bool((prev_content or {}).get("quiz", {}).get("questions"))
+    prog = await db.user_level_progress.find_one({"user_id": user_id, "level_id": prev}, {"_id": 0})
+    if prev_has_quiz:
+        return bool(prog and prog.get("quiz_passed", False))
+    # pas de quiz au niveau precedent -> prerequis = niveau precedent complete
+    chk = await check_level_unlocked(user_id, prev)
+    return bool(chk.get("unlocked"))
+
 @api_router.get("/level-progress/check-unlock/{user_id}/{level_id}")
 async def check_level_unlocked(user_id: str, level_id: str):
     # Get level content
     content = await db.level_content.find_one({"level_id": level_id}, {"_id": 0})
-    
+
+    # Gating sequentiel : quiz du niveau precedent reussi ? (Niveau 1 = toujours vrai)
+    prev_level = _prev_level_id(level_id)
+    prerequisite_met = await _prerequisite_met(user_id, level_id)
+
     # Get user progress
     progress = await db.user_level_progress.find_one({
         "user_id": user_id,
@@ -1286,6 +1313,8 @@ async def check_level_unlocked(user_id: str, level_id: str):
             "access_granted": False,
             "payment_status": "pending",
             "volunteer_status": "pending",
+            "prerequisite_met": prerequisite_met,
+            "prereq_level": prev_level,
             "reason": "no_progress"
         }
     
@@ -1298,6 +1327,8 @@ async def check_level_unlocked(user_id: str, level_id: str):
             "access_granted": False,
             "payment_status": progress.get('payment_status', 'pending'),
             "volunteer_status": progress.get('volunteer_status', 'pending'),
+            "prerequisite_met": prerequisite_met,
+            "prereq_level": prev_level,
             "reason": "access_not_granted"
         }
     
@@ -1306,6 +1337,8 @@ async def check_level_unlocked(user_id: str, level_id: str):
         return {
             "unlocked": True,
             "access_granted": True,
+            "prerequisite_met": prerequisite_met,
+            "prereq_level": prev_level,
             "reason": "no_content_but_access_granted"
         }
     
@@ -1330,12 +1363,17 @@ async def check_level_unlocked(user_id: str, level_id: str):
         "live_required": content.get('live_required', False),
         "content_done": videos_done and text_done and live_done,
         "has_quiz": has_quiz,
-        "quiz_passed": bool(progress.get('quiz_passed', False))
+        "quiz_passed": bool(progress.get('quiz_passed', False)),
+        "prerequisite_met": prerequisite_met,
+        "prereq_level": prev_level
     }
 
 @api_router.post("/level-access/request")
 async def request_level_access(input: LevelAccessRequest):
     """Request payment or volunteer access to a level"""
+    # Gating sequentiel (option c) : prerequis = quiz du niveau precedent reussi
+    if not await _prerequisite_met(input.user_id, input.level_id):
+        raise HTTPException(status_code=403, detail="Réussissez d'abord le quiz du niveau précédent pour débloquer ce niveau.")
     # Get or create progress
     progress = await db.user_level_progress.find_one({
         "user_id": input.user_id,
@@ -1862,7 +1900,12 @@ async def create_stripe_checkout(request: Request, input: StripeCheckoutRequest)
     
     if price <= 0:
         raise HTTPException(status_code=400, detail="Prix invalide pour ce niveau")
-    
+
+    # Gating sequentiel (option c) : interdit de payer/debloquer un niveau si le quiz
+    # du niveau precedent n'est pas reussi. Reussir un quiz ne contourne PAS le paiement.
+    if not await _prerequisite_met(input.user_id, input.level_id):
+        raise HTTPException(status_code=403, detail="Réussissez d'abord le quiz du niveau précédent pour débloquer ce niveau.")
+
     # Create internal transaction FIRST (before redirect to Stripe)
     transaction_id = str(uuid.uuid4())
     external_ref = f"AFRO-STRIPE-{uuid.uuid4().hex[:8].upper()}"
@@ -2126,7 +2169,8 @@ async def create_payrexx_payment(input: PaymentInitiate):
     - Payrexx API key
     - Payrexx instance name
     """
-    
+    if not await _prerequisite_met(input.user_id, input.level_id):
+        raise HTTPException(status_code=403, detail="Réussissez d'abord le quiz du niveau précédent pour débloquer ce niveau.")
     # Get level payment config
     config = await db.level_payment_config.find_one({"level_id": input.level_id}, {"_id": 0})
     if not config:
@@ -2190,7 +2234,8 @@ async def create_flutterwave_payment(input: PaymentInitiate):
     - Flutterwave public key
     - Flutterwave secret key
     """
-    
+    if not await _prerequisite_met(input.user_id, input.level_id):
+        raise HTTPException(status_code=403, detail="Réussissez d'abord le quiz du niveau précédent pour débloquer ce niveau.")
     # Get level payment config
     config = await db.level_payment_config.find_one({"level_id": input.level_id}, {"_id": 0})
     if not config:

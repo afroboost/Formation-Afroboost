@@ -383,7 +383,10 @@ const LevelsPage = () => {
               const accessGranted = unlockStatus.access_granted;
               const paymentStatus = unlockStatus.payment_status || 'pending';
               const volunteerStatus = unlockStatus.volunteer_status || 'pending';
-              
+              // Gating sequentiel (option c) : quiz du niveau precedent reussi ?
+              const prerequisiteMet = unlockStatus.prerequisite_met !== false;
+              const prereqNum = unlockStatus.prereq_level ? unlockStatus.prereq_level.replace('level-', '') : '';
+
               // Get payment config for this level
               const paymentConfig = paymentConfigs[levelId] || {
                 payment_mode: 'both',
@@ -428,7 +431,11 @@ const LevelsPage = () => {
                     ) : !accessGranted ? (
                       <div className="space-y-2">
                         {/* Payment validated state */}
-                        {paymentStatus === 'validated' ? (
+                        {!prerequisiteMet ? (
+                          <div className="text-center p-3 bg-purple-500/10 rounded-lg border border-purple-500/40" data-testid={`prereq-locked-${index}`}>
+                            <p className="text-purple-300 text-sm font-semibold">Réussissez le quiz du Niveau {prereqNum} pour débloquer ce niveau</p>
+                          </div>
+                        ) : paymentStatus === 'validated' ? (
                           <div className="text-center p-3 bg-green-500/10 rounded-lg border border-green-500">
                             <p className="text-green-500 text-sm font-semibold">Paiement validé ✓</p>
                           </div>

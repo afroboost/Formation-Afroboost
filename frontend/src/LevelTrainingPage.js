@@ -306,7 +306,7 @@ const LevelTrainingPage = () => {
 
         {activeTab === 'text' && (
           <>
-          {(content?.youtube_url || content?.diagram_url || content?.map_markers?.length > 0 || content?.muscle_markers?.length > 0 || content?.images?.length > 0 || levelId === 'level-1' || levelId === 'level-2') && (
+          {(
             <Card className="card-dark border-neon mb-8" data-testid="visual-content">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2"><Image size={20} /> Média / Visuel</CardTitle>
@@ -329,7 +329,11 @@ const LevelTrainingPage = () => {
                   <AfricaStylesMap />
                 ) : levelId === 'level-2' ? (
                   <AnatomyDiagram />
-                ) : null}
+                ) : (
+                  <p className="text-gray-400 text-sm text-center py-8">
+                    Aucun média pour ce niveau pour le moment. Ajoutez une vidéo YouTube ou une image dans l&apos;administration.
+                  </p>
+                )}
                 {content?.images?.length > 0 && (
                   <div className="mt-8">
                     <h4 className="text-white font-semibold mb-3">Galerie</h4>

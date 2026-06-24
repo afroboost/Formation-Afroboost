@@ -598,7 +598,7 @@ function App() {
           <Route path="/diplomas" element={<DiplomasPage />} />
           <Route path="/verify-certificate" element={<VerifyCertificatePage />} />
           <Route path="/confidentialite" element={<LegalPage pageKey="privacy" fallbackTitle="Politique de confidentialité" />} />
-          <Route path="/charte" element={<LegalPage pageKey="charte" fallbackTitle="Charte d'engagement de l'instructeur Afroboost" />} />
+          <Route path="/charte" element={<LegalPage pageKey="charte" fallbackTitle="Charte d'engagement de l'instructeur Afroboost" signable />} />
           <Route path="/admin-login" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Routes>

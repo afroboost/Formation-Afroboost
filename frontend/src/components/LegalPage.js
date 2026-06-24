@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import CharteSignForm from '@/components/CharteSignForm';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -11,7 +12,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
  * Le texte est edite en admin (collection formation_pages) et rendu lisiblement :
  * les lignes "N. Titre" deviennent des sous-titres, "• " des puces.
  */
-const LegalPage = ({ pageKey, fallbackTitle }) => {
+const LegalPage = ({ pageKey, fallbackTitle, signable = false }) => {
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -76,6 +77,12 @@ const LegalPage = ({ pageKey, fallbackTitle }) => {
         ) : (
           <div className="card-dark border-neon rounded-2xl p-6 sm:p-10" data-testid="legal-content">
             {renderText(page?.text)}
+          </div>
+        )}
+
+        {signable && !loading && (
+          <div className="mt-8">
+            <CharteSignForm version={page?.version} />
           </div>
         )}
       </div>

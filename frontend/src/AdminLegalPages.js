@@ -20,6 +20,7 @@ const AdminLegalPages = () => {
 
   const [charteTitle, setCharteTitle] = useState('');
   const [charteText, setCharteText] = useState('');
+  const [charteVersion, setCharteVersion] = useState('');
   const [savingCharte, setSavingCharte] = useState(false);
 
   const loadPage = async (key) => {
@@ -32,6 +33,7 @@ const AdminLegalPages = () => {
       } else {
         setCharteTitle(data.title || '');
         setCharteText(data.text || '');
+        setCharteVersion(data.version || '');
       }
     } catch (error) {
       console.error(`Error loading page ${key}:`, error);
@@ -72,7 +74,8 @@ const AdminLegalPages = () => {
     try {
       await axios.post(`${API}/admin/pages/charte`, {
         title: charteTitle,
-        text: charteText
+        text: charteText,
+        version: charteVersion
       });
       toast.success('Page enregistrée');
       loadPage('charte');
@@ -169,6 +172,21 @@ const AdminLegalPages = () => {
               className="input-dark"
               data-testid="charte-title-input"
             />
+          </div>
+
+          <div className="mb-4">
+            <Label htmlFor="charte-version" className="text-gray-300 mb-2 block">Version</Label>
+            <Input
+              id="charte-version"
+              placeholder="v1-2026-06"
+              value={charteVersion}
+              onChange={(e) => setCharteVersion(e.target.value)}
+              className="input-dark"
+              data-testid="charte-version-input"
+            />
+            <Label className="text-gray-400 text-sm mt-1 block">
+              Changez la version pour redemander la signature de la charte à tous les instructeurs.
+            </Label>
           </div>
 
           <div className="mb-2">

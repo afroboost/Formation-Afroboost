@@ -18,6 +18,7 @@ import AdminEngagementTracking from '@/AdminEngagementTracking';
 import AdminHelpRequests from '@/AdminHelpRequests';
 import AdminConditions from '@/AdminConditions';
 import AdminLegalPages from '@/AdminLegalPages';
+import AdminCharteSignatures from '@/AdminCharteSignatures';
 import { initAdminAuth, isAdminAuthenticated } from '@/lib/adminAuth';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -440,6 +441,13 @@ const AdminPanel = () => {
         {/* ==================== */}
         <div className="mb-8">
           <AdminLegalPages />
+        </div>
+
+        {/* ==================== */}
+        {/* SECTION 11: CHARTES SIGNÉES */}
+        {/* ==================== */}
+        <div className="mb-8">
+          <AdminCharteSignatures />
         </div>
 
         <div className="text-center mt-12 space-x-4">

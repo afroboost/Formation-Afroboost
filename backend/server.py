@@ -1156,26 +1156,86 @@ PAGE_DEFAULTS = {
 class LegalPageUpdate(BaseModel):
     title: str = ""
     text: str = ""
+    version: str = ""
+
+def _page_version_default(key):
+    return "v1-2026-06" if key == "charte" else ""
 
 @api_router.get("/pages/{key}")
 async def get_page(key: str, response: Response):
     response.headers["Cache-Control"] = "no-store, must-revalidate"
     doc = await db.formation_pages.find_one({"key": key}, {"_id": 0})
     if not doc:
-        return {"key": key, "title": PAGE_DEFAULTS.get(key, ""), "text": ""}
-    return {"key": key, "title": doc.get("title", PAGE_DEFAULTS.get(key, "")), "text": doc.get("text", "")}
+        return {"key": key, "title": PAGE_DEFAULTS.get(key, ""), "text": "", "version": _page_version_default(key)}
+    return {"key": key, "title": doc.get("title", PAGE_DEFAULTS.get(key, "")),
+            "text": doc.get("text", ""), "version": doc.get("version", _page_version_default(key))}
 
 @api_router.get("/admin/pages/{key}", dependencies=[Depends(require_admin)])
 async def get_page_admin(key: str):
     doc = await db.formation_pages.find_one({"key": key}, {"_id": 0})
-    return doc or {"key": key, "title": PAGE_DEFAULTS.get(key, ""), "text": ""}
+    return doc or {"key": key, "title": PAGE_DEFAULTS.get(key, ""), "text": "", "version": _page_version_default(key)}
 
 @api_router.post("/admin/pages/{key}", dependencies=[Depends(require_admin)])
 async def update_page_admin(key: str, input: LegalPageUpdate):
     doc = {"key": key, "title": input.title or PAGE_DEFAULTS.get(key, ""), "text": input.text or "",
+           "version": (input.version or _page_version_default(key)).strip(),
            "updated_at": datetime.now(timezone.utc).isoformat()}
     await db.formation_pages.update_one({"key": key}, {"$set": doc}, upsert=True)
     return {"success": True, **doc}
+
+# ---- CHARTE D'ENGAGEMENT : signature instructeur ----
+class CharteSign(BaseModel):
+    user_id: str = ""
+    user_name: str = ""
+    version: str = ""
+    signature_type: str = "typed"  # 'typed' | 'drawn'
+    signature_data: str = ""  # nom tape OU data URL (signature dessinee)
+
+async def _charte_version():
+    doc = await db.formation_pages.find_one({"key": "charte"}, {"_id": 0})
+    return (doc or {}).get("version") or "v1-2026-06"
+
+@api_router.post("/charte/sign")
+async def sign_charte(input: CharteSign, request: Request):
+    rate_limit(request, "chartesign", limit=10, window=300)
+    if not (input.user_name or "").strip():
+        raise HTTPException(status_code=400, detail="Nom requis pour signer la charte")
+    ver = await _charte_version()
+    now = datetime.now(timezone.utc)
+    stype = input.signature_type if input.signature_type in ("typed", "drawn") else "typed"
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": (input.user_id or "").strip(),
+        "user_name": (input.user_name or "").strip(),
+        "version": ver, "signed_at": now.isoformat(), "status": "signed",
+        "signature_type": stype, "signature_data": (input.signature_data or "")[:300000],
+        "ip": request.client.host if request.client else None,
+    }
+    if doc["user_id"]:
+        await db.charte_signatures.update_one(
+            {"user_id": doc["user_id"], "version": ver}, {"$set": doc}, upsert=True)
+    else:
+        await db.charte_signatures.insert_one(doc)
+    return {"success": True, "version": ver, "signed_at": doc["signed_at"]}
+
+@api_router.get("/charte/status/{user_id}")
+async def charte_status(user_id: str, response: Response):
+    response.headers["Cache-Control"] = "no-store, must-revalidate"
+    ver = await _charte_version()
+    sig = await db.charte_signatures.find_one({"user_id": user_id, "version": ver}, {"_id": 0})
+    return {"signed": bool(sig), "current_version": ver,
+            "signed_version": (sig or {}).get("version"), "signed_at": (sig or {}).get("signed_at"),
+            "user_name": (sig or {}).get("user_name")}
+
+@api_router.get("/admin/charte-signatures", dependencies=[Depends(require_admin)])
+async def list_charte_signatures():
+    return await db.charte_signatures.find({}, {"_id": 0}).sort("signed_at", -1).to_list(5000)
+
+@api_router.delete("/admin/charte-signatures/{sig_id}", dependencies=[Depends(require_admin)])
+async def delete_charte_signature(sig_id: str, request: Request):
+    rate_limit(request, "chartedel", limit=30, window=300)
+    await db.charte_signatures.delete_one({"id": sig_id})
+    return {"success": True}
 
 # ---- QUIZ : test de reussite par niveau (correction cote serveur) ----
 def _next_level_id(level_id):

@@ -32,19 +32,23 @@ const LevelTrainingPage = () => {
   const [userName, setUserName] = useState('');
   const [loading, setLoading] = useState(true);
   const [condAccepted, setCondAccepted] = useState(null); // null=inconnu, true/false
+  const [charteSigned, setCharteSigned] = useState(null); // null=inconnu, true/false
 
   useEffect(() => {
     const storedUserId = localStorage.getItem('afroboost_user_id');
     const storedUserName = localStorage.getItem('afroboost_user_name');
-    
+
     if (storedUserId) {
       setUserId(storedUserId);
       setUserName(storedUserName || '');
       fetchData(storedUserId);
-      // Garde : conditions de participation acceptees ? (accès direct par URL)
+      // Garde : conditions acceptees ET charte signee ? (accès direct par URL)
       axios.get(`${API}/conditions/status/${storedUserId}`)
         .then((r) => setCondAccepted(!!r.data?.accepted))
         .catch(() => setCondAccepted(true)); // erreur transitoire : ne pas verrouiller (la page Niveaux reste le garde principal)
+      axios.get(`${API}/charte/status/${storedUserId}`)
+        .then((r) => setCharteSigned(!!r.data?.signed))
+        .catch(() => setCharteSigned(true));
     } else {
       setLoading(false);
     }
@@ -167,6 +171,26 @@ const LevelTrainingPage = () => {
           <CardContent>
             <Link to="/levels">
               <Button className="btn-neon w-full">Lire et accepter les conditions</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (condAccepted === true && charteSigned === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <Card className="card-dark border-neon max-w-md">
+          <CardHeader>
+            <CardTitle className="text-white">Signature de la charte requise</CardTitle>
+            <CardDescription className="text-gray-400">
+              Vous devez signer la Charte d&apos;engagement avant d&apos;accéder aux niveaux.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/levels">
+              <Button className="btn-neon w-full">Signer la charte d&apos;engagement</Button>
             </Link>
           </CardContent>
         </Card>

@@ -35,7 +35,7 @@ const BRAND_GRADIENT = 'linear-gradient(135deg,#8a2be2,#ff00ff)';
  * @param {Object} props
  * @param {string} props.version  Current charte version label to record/display
  */
-export default function CharteSignForm({ version }) {
+export default function CharteSignForm({ version, onSigned }) {
   const [userId, setUserId] = useState('');
   const [name, setName] = useState('');
 
@@ -207,6 +207,7 @@ export default function CharteSignForm({ version }) {
       toast.success('Charte signée');
       setSignedInfo({ date: today, version });
       setAlreadySigned(true);
+      if (typeof onSigned === 'function') onSigned();
     } catch (err) {
       console.error('CharteSignForm sign error:', err);
       const detail =

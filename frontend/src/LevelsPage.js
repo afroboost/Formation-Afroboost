@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Download, CheckCircle, GraduationCap, Award, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ConditionsGate from '@/components/ConditionsGate';
+import CharteGate from '@/components/CharteGate';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -66,6 +67,7 @@ const LevelsPage = () => {
   const [studentId, setStudentId] = useState('');
   const [studentName, setStudentName] = useState('');
   const [conditionsOK, setConditionsOK] = useState(false);
+  const [charteOK, setCharteOK] = useState(false);
   const [myDocuments, setMyDocuments] = useState([]);
   const [showValidationForm, setShowValidationForm] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState(null);
@@ -307,6 +309,14 @@ const LevelsPage = () => {
           userId={studentId}
           userName={studentName}
           onAccepted={() => setConditionsOK(true)}
+        />
+      )}
+      {/* Puis signature OBLIGATOIRE de la charte d'engagement */}
+      {studentId && conditionsOK && !charteOK && (
+        <CharteGate
+          userId={studentId}
+          userName={studentName}
+          onSigned={() => setCharteOK(true)}
         />
       )}
       <div className="max-w-7xl mx-auto">

@@ -278,23 +278,15 @@ const LevelsPage = () => {
     }
   };
 
-  const downloadTrainingSummary = async () => {
-    try {
-      const response = await axios.get(`${API}/training-summary/pdf`, {
-        responseType: 'blob'
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'afroboost_training_summary.pdf');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success('Résumé de formation téléchargé!');
-    } catch (error) {
-      console.error('Error downloading training summary:', error);
-      toast.error('Erreur lors du téléchargement');
-    }
+  const downloadTrainingSummary = () => {
+    // Nouveau PDF statique (3 pages, couverture AFROBOOST) servi depuis public/
+    const link = document.createElement('a');
+    link.href = '/Programme-Afroboost.pdf';
+    link.setAttribute('download', 'Programme-Afroboost.pdf');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    toast.success('Programme téléchargé!');
   };
 
   const isLevelValidated = (levelName) => {

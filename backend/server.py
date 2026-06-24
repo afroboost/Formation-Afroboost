@@ -2629,6 +2629,36 @@ async def revoke_engagement(charter_id: str, input: dict = None, admin=Depends(r
     )
     return {"success": True}
 
+@api_router.delete("/engagement/{charter_id}")
+async def delete_engagement(charter_id: str, request: Request, admin=Depends(require_admin)):
+    """Suppression DEFINITIVE d'une charte/engagement. Revoque l'acces volontaire
+    eventuellement accorde via cette charte (sans couper un acces paye)."""
+    rate_limit(request, "engdel", limit=30, window=300)
+    charter = await db.engagement_charters.find_one({"id": charter_id})
+    if not charter:
+        raise HTTPException(status_code=404, detail="Charte introuvable")
+    now = datetime.now(timezone.utc)
+    await db.engagement_charters.delete_one({"id": charter_id})
+    # Coherence : revoquer un acces volontaire accorde via cette charte
+    await db.user_access.update_many(
+        {"user_id": charter["user_id"], "level_id": charter["level_id"],
+         "access_type": "volunteer", "status": "active"},
+        {"$set": {"status": "revoked", "revoked_at": now.isoformat(),
+                  "revoke_reason": "charte supprimee", "updated_at": now.isoformat()}},
+    )
+    # Ne pas couper un acces paye encore actif pour ce niveau
+    other = await db.user_access.find_one(
+        {"user_id": charter["user_id"], "level_id": charter["level_id"],
+         "status": "active", "access_type": {"$ne": "volunteer"}})
+    prog_set = {"volunteer_status": "rejected", "updated_at": now.isoformat()}
+    if not other:
+        prog_set["access_granted"] = False
+    await db.user_level_progress.update_one(
+        {"user_id": charter["user_id"], "level_id": charter["level_id"]},
+        {"$set": prog_set},
+    )
+    return {"success": True}
+
 # Include the router in the main app
 app.include_router(api_router)
 

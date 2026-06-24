@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import {
-  HandHeart, RefreshCw, CheckCircle, XCircle, PlusCircle, Search
+  HandHeart, RefreshCw, CheckCircle, XCircle, PlusCircle, Search, Trash2
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -65,6 +65,10 @@ const AdminEngagementTracking = () => {
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState(null);
   const [revokeReason, setRevokeReason] = useState('');
+
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const fetchCharters = async () => {
     setLoading(true);
@@ -141,6 +145,28 @@ const AdminEngagementTracking = () => {
     } catch (error) {
       console.error('Revoke error:', error);
       toast.error('Erreur lors de la révocation');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openDeleteDialog = (charter) => {
+    setDeleteTarget(charter);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setSubmitting(true);
+    try {
+      await axios.delete(`${API}/engagement/${deleteTarget.id}`);
+      toast.success('Charte supprimée définitivement');
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+      fetchCharters(); // recharge -> compteurs (Total / En attente / Validés) a jour
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error(error.response?.data?.detail || 'Erreur lors de la suppression');
     } finally {
       setSubmitting(false);
     }
@@ -234,16 +260,16 @@ const AdminEngagementTracking = () => {
             {total === 0 ? 'Aucun engagement enregistré' : 'Aucun résultat pour ces critères'}
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-700">
+          <div className="overflow-auto rounded-lg border border-gray-700 max-h-[60vh]">
             <Table>
               <TableHeader>
                 <TableRow className="border-gray-700 hover:bg-transparent">
-                  <TableHead className="text-gray-300">Participant</TableHead>
-                  <TableHead className="text-gray-300">Niveau</TableHead>
-                  <TableHead className="text-gray-300">Signé le</TableHead>
-                  <TableHead className="text-gray-300">Engagement</TableHead>
-                  <TableHead className="text-gray-300">Statut</TableHead>
-                  <TableHead className="text-gray-300 text-right">Actions</TableHead>
+                  <TableHead className="text-gray-300 sticky top-0 z-20 bg-[#160a18]">Participant</TableHead>
+                  <TableHead className="text-gray-300 sticky top-0 z-20 bg-[#160a18]">Niveau</TableHead>
+                  <TableHead className="text-gray-300 sticky top-0 z-20 bg-[#160a18]">Signé le</TableHead>
+                  <TableHead className="text-gray-300 sticky top-0 z-20 bg-[#160a18]">Engagement</TableHead>
+                  <TableHead className="text-gray-300 sticky top-0 z-20 bg-[#160a18]">Statut</TableHead>
+                  <TableHead className="text-gray-300 sticky top-0 z-20 bg-[#160a18] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -308,6 +334,16 @@ const AdminEngagementTracking = () => {
                               Révoquer
                             </Button>
                           )}
+                          <Button
+                            onClick={() => openDeleteDialog(c)}
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-3 border-red-600 text-red-400 hover:bg-red-600/20"
+                            data-testid={`delete-engagement-${c.id}`}
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Supprimer
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -409,6 +445,40 @@ const AdminEngagementTracking = () => {
               data-testid="confirm-revoke-button"
             >
               Révoquer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="card-dark border-neon">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-red-400" />
+              Supprimer définitivement cette charte ?
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {deleteTarget ? `Participant : ${deleteTarget.user_name || deleteTarget.user_id} — Niveau ${deleteTarget.level_id || '—'}.` : ''}
+              {' '}Cette action est irréversible : l&apos;entrée sera retirée de la base et l&apos;accès bénévole associé sera révoqué.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-gray-600 text-gray-300"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleDelete}
+              disabled={submitting}
+              variant="destructive"
+              data-testid="confirm-delete-button"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Supprimer définitivement
             </Button>
           </DialogFooter>
         </DialogContent>

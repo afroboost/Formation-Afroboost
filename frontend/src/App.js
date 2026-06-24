@@ -19,6 +19,7 @@ import AdminLoginPage from '@/AdminLoginPage';
 import PaymentSuccessPage from '@/PaymentSuccessPage';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import LegalPage from '@/components/LegalPage';
 import AccessModeChoice from '@/pages/AccessModeChoice';
 import CharterAcceptance from '@/pages/CharterAcceptance';
 
@@ -596,6 +597,8 @@ function App() {
           <Route path="/results/:bookingId" element={<ResultsPage />} />
           <Route path="/diplomas" element={<DiplomasPage />} />
           <Route path="/verify-certificate" element={<VerifyCertificatePage />} />
+          <Route path="/confidentialite" element={<LegalPage pageKey="privacy" fallbackTitle="Politique de confidentialité" />} />
+          <Route path="/charte" element={<LegalPage pageKey="charte" fallbackTitle="Charte d'engagement de l'instructeur Afroboost" />} />
           <Route path="/admin-login" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Routes>

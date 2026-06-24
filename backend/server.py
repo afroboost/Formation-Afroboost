@@ -1147,6 +1147,36 @@ async def update_conditions_admin(input: ConditionsConfig):
 async def list_condition_acceptances():
     return await db.condition_acceptances.find({}, {"_id": 0}).sort("accepted_at", -1).to_list(5000)
 
+# ---- PAGES LEGALES editables (confidentialite, charte) ----
+PAGE_DEFAULTS = {
+    "privacy": "Politique de confidentialité",
+    "charte": "Charte d'engagement de l'instructeur Afroboost",
+}
+
+class LegalPageUpdate(BaseModel):
+    title: str = ""
+    text: str = ""
+
+@api_router.get("/pages/{key}")
+async def get_page(key: str, response: Response):
+    response.headers["Cache-Control"] = "no-store, must-revalidate"
+    doc = await db.formation_pages.find_one({"key": key}, {"_id": 0})
+    if not doc:
+        return {"key": key, "title": PAGE_DEFAULTS.get(key, ""), "text": ""}
+    return {"key": key, "title": doc.get("title", PAGE_DEFAULTS.get(key, "")), "text": doc.get("text", "")}
+
+@api_router.get("/admin/pages/{key}", dependencies=[Depends(require_admin)])
+async def get_page_admin(key: str):
+    doc = await db.formation_pages.find_one({"key": key}, {"_id": 0})
+    return doc or {"key": key, "title": PAGE_DEFAULTS.get(key, ""), "text": ""}
+
+@api_router.post("/admin/pages/{key}", dependencies=[Depends(require_admin)])
+async def update_page_admin(key: str, input: LegalPageUpdate):
+    doc = {"key": key, "title": input.title or PAGE_DEFAULTS.get(key, ""), "text": input.text or "",
+           "updated_at": datetime.now(timezone.utc).isoformat()}
+    await db.formation_pages.update_one({"key": key}, {"$set": doc}, upsert=True)
+    return {"success": True, **doc}
+
 # ---- QUIZ : test de reussite par niveau (correction cote serveur) ----
 def _next_level_id(level_id):
     import re

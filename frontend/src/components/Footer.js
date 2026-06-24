@@ -5,7 +5,7 @@ const Footer = () => {
   return (
     <footer className="border-t border-purple-500/20 bg-[#1a0a1a]/80 mt-16">
       <div className="max-w-7xl mx-auto px-6 py-10">
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span
@@ -27,6 +27,13 @@ const Footer = () => {
               <li><Link to="/exam" className="text-gray-400 hover:text-fuchsia-400 transition-colors">Réserver un examen</Link></li>
               <li><Link to="/diplomas" className="text-gray-400 hover:text-fuchsia-400 transition-colors">Mes diplômes</Link></li>
               <li><Link to="/verify-certificate" className="text-gray-400 hover:text-fuchsia-400 transition-colors">Vérifier un certificat</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-white mb-3">Légal</h2>
+            <ul className="space-y-2 text-sm">
+              <li><Link to="/confidentialite" className="text-gray-400 hover:text-fuchsia-400 transition-colors">Politique de confidentialité</Link></li>
+              <li><Link to="/charte" className="text-gray-400 hover:text-fuchsia-400 transition-colors">Charte d'engagement</Link></li>
             </ul>
           </div>
           <div>

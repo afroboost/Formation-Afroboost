@@ -40,10 +40,10 @@ const LandingPage = () => {
       <div className="max-w-7xl mx-auto">
         {/* Hero Section */}
         <div className="text-center mb-20">
-          <h1 className="text-6xl sm:text-7xl font-bold mb-8 neon-glow" data-testid="landing-title">
+          <h1 className="text-5xl sm:text-7xl font-bold mb-8 neon-glow break-words" data-testid="landing-title">
             AFROBOOST
           </h1>
-          <h2 className="text-3xl sm:text-4xl font-bold mb-6 text-white" data-testid="landing-subtitle">
+          <h2 className="text-2xl sm:text-4xl font-bold mb-6 text-white" data-testid="landing-subtitle">
             Devenez Instructeur Certifié
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-10">
@@ -51,10 +51,10 @@ const LandingPage = () => {
             pour enseigner en ligne ou en présentiel.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-stretch sm:items-center max-w-2xl mx-auto">
             <Button
               onClick={downloadTrainingSummary}
-              className="btn-neon text-lg px-8 py-6"
+              className="btn-neon w-full sm:w-auto whitespace-normal h-auto text-base sm:text-lg px-5 sm:px-8 py-4 sm:py-6 leading-snug text-center"
               disabled={isDownloading}
               data-testid="hero-download-summary-button"
             >
@@ -65,19 +65,19 @@ const LandingPage = () => {
                 </>
               ) : (
                 <>
-                  <Download className="w-5 h-5 mr-2" />
+                  <Download className="w-5 h-5 mr-2 flex-shrink-0" />
                   Télécharger le Programme Complet (PDF)
                 </>
               )}
             </Button>
-            <Link to="/levels">
+            <Link to="/levels" className="w-full sm:w-auto">
               <Button
                 variant="outline"
-                className="border-purple-500 text-purple-400 btn-secondary text-lg px-8 py-6"
+                className="border-purple-500 text-purple-400 btn-secondary w-full sm:w-auto whitespace-normal h-auto text-base sm:text-lg px-5 sm:px-8 py-4 sm:py-6 leading-snug text-center"
                 data-testid="hero-start-training-button"
               >
                 Commencer la Formation
-                <ArrowRight className="w-5 h-5 ml-2" />
+                <ArrowRight className="w-5 h-5 ml-2 flex-shrink-0" />
               </Button>
             </Link>
           </div>
@@ -107,19 +107,27 @@ const LandingPage = () => {
             <img
               src="/visuals/materiel/tente.jpg"
               alt="Tente Afroboost Spider 7x7 en festival"
-              className="w-full h-[260px] sm:h-[440px] object-cover"
+              className="w-full h-auto sm:h-[440px] sm:object-cover"
               loading="lazy"
             />
+            {/* Overlay desktop uniquement (sur mobile le texte passe SOUS l'image) */}
             <div
-              className="absolute inset-0"
+              className="hidden sm:block absolute inset-0"
               style={{ background: 'linear-gradient(to top, #160a18 0%, rgba(22,10,24,0.25) 45%, transparent 75%)' }}
             ></div>
-            <div className="absolute bottom-0 left-0 p-6 sm:p-10">
-              <h3 className="text-2xl sm:text-4xl font-bold text-white mb-2">Du studio au festival</h3>
+            <div className="hidden sm:block absolute bottom-0 left-0 p-10">
+              <h3 className="text-4xl font-bold text-white mb-2">Du studio au festival</h3>
               <p className="text-gray-200 max-w-xl">
                 Animez des événements Silent en plein air avec la tente Afroboost Spider 7×7 — montage en 15 minutes.
               </p>
             </div>
+          </div>
+          {/* Texte sous l'image sur mobile (image bien visible, pas d'overlay) */}
+          <div className="sm:hidden mt-4 px-1">
+            <h3 className="text-2xl font-bold text-white mb-2">Du studio au festival</h3>
+            <p className="text-gray-300">
+              Animez des événements Silent en plein air avec la tente Afroboost Spider 7×7 — montage en 15 minutes.
+            </p>
           </div>
         </div>
 
@@ -158,9 +166,9 @@ const LandingPage = () => {
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-gray-300 text-sm">
-                <li>🌐 Certification En Ligne</li>
-                <li>🏢 Certification Présentiel</li>
-                <li>🌟 Certification Hybride (Online + Présentiel)</li>
+                <li>• Certification En Ligne</li>
+                <li>• Certification Présentiel</li>
+                <li>• Certification Hybride (Online + Présentiel)</li>
               </ul>
               <p className="text-purple-400 text-sm mt-4 text-center">
                 Diplômes officiels imprimables et vérifiables
@@ -202,7 +210,7 @@ const LandingPage = () => {
             </p>
             <Button
               onClick={downloadTrainingSummary}
-              className="btn-neon text-lg px-10 py-6"
+              className="btn-neon w-full sm:w-auto max-w-md mx-auto whitespace-normal h-auto text-base sm:text-lg px-5 sm:px-10 py-4 sm:py-6 leading-snug text-center"
               disabled={isDownloading}
               data-testid="cta-download-summary-button"
             >
@@ -213,13 +221,13 @@ const LandingPage = () => {
                 </>
               ) : (
                 <>
-                  <Download className="w-5 h-5 mr-2" />
+                  <Download className="w-5 h-5 mr-2 flex-shrink-0" />
                   Télécharger le Résumé de Formation (PDF)
                 </>
               )}
             </Button>
             <p className="text-gray-400 text-sm mt-4">
-              ✅ Gratuit • Aucune inscription requise • Document officiel imprimable
+              Gratuit • Aucune inscription requise • Document officiel imprimable
             </p>
           </CardContent>
         </Card>
@@ -234,10 +242,11 @@ const LandingPage = () => {
               Aidez vos amis à découvrir la certification d'instructeur Afroboost
             </p>
             <ShareButton
-              shareText="Découvre la formation Afroboost - Deviens Instructeur Certifié de danse Afrobeat! 💜🔥"
+              shareText="Découvre la formation Afroboost - Deviens Instructeur Certifié de danse Afrobeat!"
               shareUrl={window.location.origin}
               buttonText="Partager sur les Réseaux Sociaux"
               variant="default"
+              className="w-full sm:w-auto max-w-md mx-auto whitespace-normal h-auto py-4 px-5 text-base leading-snug text-center"
             />
             <p className="text-gray-400 text-xs mt-4">
               Partagez sur Instagram, WhatsApp, Facebook et plus

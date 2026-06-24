@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Share2, Copy, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const ShareButton = ({ shareText, shareUrl, buttonText = "Partager", variant = "outline" }) => {
+const ShareButton = ({ shareText, shareUrl, buttonText = "Partager", variant = "outline", className = "" }) => {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +30,7 @@ const ShareButton = ({ shareText, shareUrl, buttonText = "Partager", variant = "
     <Button
       onClick={handleShare}
       variant={variant}
-      className={`${variant === "outline" ? "border-purple-500 text-purple-400 btn-secondary" : "btn-neon"} ${copied ? 'success-glow' : ''}`}
+      className={`${variant === "outline" ? "border-purple-500 text-purple-400 btn-secondary" : "btn-neon"} ${copied ? 'success-glow' : ''} ${className}`}
       disabled={loading || copied}
       data-testid="share-button"
     >
